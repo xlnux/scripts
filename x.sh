@@ -202,9 +202,9 @@ if command -v code &>/dev/null; then
 fi
 
 
-wget -qO- https://raw.githubusercontent.com/xscriptor/terminal/main/ghostty/install.sh | bash
-wget -qO- https://raw.githubusercontent.com/xscriptor/terminal/main/ptyxis/install.sh | bash
-curl -fsSL https://raw.githubusercontent.com/xscriptor/xfetch/main/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/xscriptor-colors/terminal/main/emulators/ghostty/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/xscriptor-colors/terminal/main/emulators/ptyxis/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/xfetch-cli/xfetch/main/install.sh | bash
 curl -fsSL https://raw.githubusercontent.com/xscriptor/xtop/main/install.sh | bash
 
 echo " Done. Reload your shell:"

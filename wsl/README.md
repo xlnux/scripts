@@ -16,7 +16,7 @@ This script must be run as `root` on a fresh WSL instance.
 
 ```bash
 # Download and run as root
-wget https://raw.githubusercontent.com/xscriptor/x/main/wsl/install.sh
+wget https://raw.githubusercontent.com/xlnux/x/main/wsl/install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```
@@ -39,7 +39,7 @@ After restarting, run the setup script to finish configuring your environment.
 See [setup/README.md](../setup/README.md) for details.
 
 ```bash
-wget https://raw.githubusercontent.com/xscriptor/x/main/wsl/setup/install.sh
+wget https://raw.githubusercontent.com/xlnux/x/main/wsl/setup/install.sh
 chmod +x install.sh
 ./install.sh
 ```

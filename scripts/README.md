@@ -5,17 +5,17 @@
 ### To add Nvidia support run the following command:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/xscriptor/x/main/scripts/nvidia/script.sh | bash
+curl -sL https://raw.githubusercontent.com/xlnux/x/main/scripts/nvidia/script.sh | bash
 ```
 ###  to install qemu run the following command:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/xscriptor/x/main/scripts/qemu/script.sh | bash
+curl -sL https://raw.githubusercontent.com/xlnux/x/main/scripts/qemu/script.sh | bash
 ```
 ## web
 
 ### To install nvm+ node + typescript + npm + pnpm + yarn run the following command:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/xscriptor/x/main/scripts/nvm/script.sh | bash
+curl -sL https://raw.githubusercontent.com/xlnux/x/main/scripts/nvm/script.sh | bash
 ```
