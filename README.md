@@ -14,7 +14,7 @@ This repository contains system scripts for XOS. The primary entrypoint is `x.sh
   - Run `bash x.sh` after system startup or reboot.
 
   ```bash
-  curl -sLO https://raw.githubusercontent.com/xscriptor/x/main/x.sh || exit 0; chmod +x x.sh || true; ./x.sh || true
+  curl -sLO https://raw.githubusercontent.com/xlnux/x/main/x.sh || exit 0; chmod +x x.sh || true; ./x.sh || true
   ```
   
   - After execution, reload your shell: `source ~/.bashrc` or `source ~/.zshrc`.

@@ -10,7 +10,7 @@ Run the setup script to configure your environment:
 
 ```bash
 # Download and run directly
-wget https://raw.githubusercontent.com/xscriptor/x/main/wsl/setup/install.sh
+wget https://raw.githubusercontent.com/xlnux/x/main/wsl/setup/install.sh
 chmod +x install.sh
 ./install.sh
 ```
