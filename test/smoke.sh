@@ -89,6 +89,11 @@ THEME_OUT="$(bash "$SRC/bin/x" theme list)"
 check "help lista theme list" grep -q "theme list" <<< "$HELP_OUT"
 check "theme list muestra x-dark" grep -q "x-dark" <<< "$THEME_OUT"
 
+# Despacho via symlink (equivalente a /usr/bin/x).
+ln -s "$SRC/bin/x" "$TMP/xlink"
+SYMLINK_OUT="$(bash "$TMP/xlink" help)"
+check "despacho via symlink resuelve el binario" grep -q "theme set" <<< "$SYMLINK_OUT"
+
 # theme set con overrides a tmp.
 export X_STATE_DIR="$TMP/state"
 export X_THEME_CONF="$TMP/home2/.config/x/theme.conf"

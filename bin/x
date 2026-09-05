@@ -8,7 +8,7 @@ set -euo pipefail
 #   # x:root=true|false         (opcional; true exige root)
 # Anadir un comando = crear un archivo en bin/. No hay registro central.
 
-X_BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+X_BIN="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 export X_BIN
 export X_CLI=1
 

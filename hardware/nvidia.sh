@@ -18,18 +18,11 @@ error() {
     exit 1
 }
 
-# Wrapper to use 'x' for sudo operations if available, otherwise fallback or direct
 run_privileged() {
-    if command -v x &>/dev/null; then
-        x "$@"
+    if [ "$EUID" -eq 0 ]; then
+        "$@"
     else
-        # If 'x' is not the wrapper we expect, or if we are just running manually
-        # Assume user might run as root or sudo is needed
-        if [ "$EUID" -ne 0 ]; then
-            sudo "$@"
-        else
-            "$@"
-        fi
+        sudo "$@"
     fi
 }
 

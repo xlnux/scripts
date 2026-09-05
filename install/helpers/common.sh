@@ -51,10 +51,10 @@ run_privileged() {
     fi
     if [[ "$(id -u)" -eq 0 ]]; then
         "$@"
-    elif has_cmd x; then
-        x "$@"
-    else
+    elif has_cmd sudo; then
         sudo "$@"
+    else
+        error "no se puede elevar privilegios (sudo ausente)"
     fi
 }
 

@@ -11,16 +11,11 @@ log() {
     echo -e "\033[1;32m[XOs]\033[0m $1"
 }
 
-# Wrapper to use 'x' for sudo operations if available
 run_privileged() {
-    if command -v x &>/dev/null; then
-        x "$@"
+    if [ "$EUID" -eq 0 ]; then
+        "$@"
     else
-        if [ "$EUID" -ne 0 ]; then
-            sudo "$@"
-        else
-            "$@"
-        fi
+        sudo "$@"
     fi
 }
 
