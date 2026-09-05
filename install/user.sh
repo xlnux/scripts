@@ -24,4 +24,9 @@ if [[ "${X_NODE:-0}" == "1" ]]; then
     run_as_user bash "$X_ROOT/tools/node.sh"
 fi
 
+if [[ "${X_HYPRLAND:-1}" == "1" ]]; then
+    log "usuario: instalando config de Hyprland (repo externo)"
+    run_as_user bash "$X_ROOT/tools/hyprland-install.sh"
+fi
+
 log "usuario aprovisionado"

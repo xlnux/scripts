@@ -1,16 +1,22 @@
-# x — config de Hyprland (placeholder)
+# x — config de Hyprland
 
-La configuracion de Hyprland del sistema x vive en un **repo aparte** del
-mantenedor (basada en Lua + matugen) y se importa aqui cuando el usuario la
-aporte.
+La configuracion de Hyprland de x no se versiona en la org: se instala de
+forma **limpia** desde el repo externo `xscriptor-colors/hyprland` (solo rama
+`main`, sin modificarlo ni integrarlo).
 
-## Estado
+## Instalacion
 
-- Este directorio es el punto de entrada versionado para `~/.config/hypr`.
-- El contenido real se integrara siguiendo la estructura modular del repo
-  origen (lua de config, monitors, binds, autostart, temas y wallpapers) y
-  reemplazara a este README cuando se aporte.
+`install/user.sh` la instala por defecto (modo `full`) delegando en
+`tools/hyprland-install.sh`, que:
+
+1. Clona el repo externo en una copia temporal (por defecto `main`).
+2. Elimina `.git`/`.github` de la copia para no anidar repos.
+3. Ejecuta su `install.sh` documentado (respeta modos `dotfiles`/`nvidia`).
+
+Variables utiles: `X_HYPRLAND=0` (no instalar), `X_HYPR_MODE=dotfiles|nvidia`,
+`X_HYPR_REF=<commit>` (fijar version).
 
 ## Referencias
 
 - ADR-0005 en `DECISIONS.md` del workspace.
+

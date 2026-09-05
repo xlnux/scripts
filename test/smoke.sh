@@ -57,6 +57,22 @@ x_sync_config "$CONF" "$DST"
 check "segunda pasada es idempotente (sin backup extra)" \
     test "$(find "$DST" -name 'app.conf.bak.*' | wc -l)" = "$BAK_COUNT"
 
+echo "== tool hyprland-install =="
+# Fuente local falsa: verifica que se limpia .git/.github y el mapeo de modos.
+FAKE_HYPR="$TMP/fake-hypr"
+mkdir -p "$FAKE_HYPR/.git" "$FAKE_HYPR/.github" 
+touch "$FAKE_HYPR/install.sh"
+
+X_HYPR_DRYRUN=1 X_HYPR_SOURCE="$FAKE_HYPR" X_HYPR_MODE=dotfiles \
+    bash "$SRC/tools/hyprland-install.sh" > "$TMP/hypr.out" 2>&1
+check "limpia .git de la copia" test ! -e "$FAKE_HYPR/.git"
+check "limpia .github de la copia" test ! -e "$FAKE_HYPR/.github"
+check "mapea modo dotfiles" grep -q -- '--dotfiles-only' "$TMP/hypr.out"
+
+X_HYPR_DRYRUN=1 X_HYPR_SOURCE="$FAKE_HYPR" X_HYPR_MODE=full \
+    bash "$SRC/tools/hyprland-install.sh" > "$TMP/hypr2.out" 2>&1
+check "modo full sin flags" grep -q 'install.sh  en' "$TMP/hypr2.out"
+
 if [[ "$FAIL" -eq 0 ]]; then
     echo "smoke: OK"
 else

@@ -19,9 +19,9 @@ gráfico; ver ADR-0001/ADR-0003 en `DECISIONS.md` del workspace).
 | `install/x-base.packages` | Lista de paquetes base legible por el builder (uno por linea). |
 | `skel/` | Seed de `/etc/skel` para usuarios nuevos. |
 | `etc/` | Drop-ins de `/etc` (sysctl.d, tmpfiles.d, ...). Un dir por ruta. |
-| `config/` | Dotfiles de usuario que se sincronizan a `~/.config` (con backup). `hypr/` es un placeholder pendiente del repo de config del mantenedor (ADR-0005). |
+| `config/` | Dotfiles de usuario que se sincronizan a `~/.config` (con backup). `hypr/` apunta al repo externo `xscriptor-colors/hyprland` (ADR-0005), instalado via `tools/hyprland-install.sh`. |
 | `hardware/` | Modulos autocontenidos: `nvidia.sh`, `qemu.sh`. |
-| `tools/` | Toolchains opcionales por usuario (ej. `node.sh` con fnm). |
+| `tools/` | Toolchains/instaladores opcionales por usuario: `node.sh` (fnm), `hyprland-install.sh` (config Hyprland desde repo externo). |
 | `wsl/` | Bootstrap WSL (conservado; se unificara con el payload mas adelante). |
 | `test/` | Tests locales sin root. |
 
