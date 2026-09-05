@@ -19,10 +19,16 @@ Detalles de estructura y mecánica en `docs/LAYOUT.md`.
 ## Uso
 
 ```bash
-# Provision del sistema (root)
-sudo bash install/system.sh
+# CLI (desde el repo o instalado como /usr/bin/x)
+bash bin/x help
+bash bin/x setup            # sistema (root)
+bash bin/x setup --user     # usuario actual
+bash bin/x theme set x-dark
+bash bin/x migrate
+bash bin/x update
 
-# Provision del usuario actual (finalize)
+# Directo por fases (equivalentes)
+sudo bash install/system.sh
 X_NODE=1 bash install/user.sh
 ```
 

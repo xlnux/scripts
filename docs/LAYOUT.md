@@ -7,6 +7,7 @@ gráfico; ver ADR-0001/ADR-0003 en `DECISIONS.md` del workspace).
 
 | Ruta | Papel |
 |------|-------|
+| `bin/` | CLI `x` (despachador + subcomandos `x-*.sh` por convencion). Ver `docs/CLI.md`. |
 | `install/` | Orquestadores del aprovisionamiento por fases. |
 | `install/helpers/` | Librerias bash: `common.sh` (log/privilegios/root) y `sync.sh` (sync de arboles idempotente). |
 | `install/system.sh` | Entry root: encadena `config.sh` → `hardware.sh` → `login.sh` → `post-install.sh`. |
@@ -20,6 +21,8 @@ gráfico; ver ADR-0001/ADR-0003 en `DECISIONS.md` del workspace).
 | `skel/` | Seed de `/etc/skel` para usuarios nuevos. |
 | `etc/` | Drop-ins de `/etc` (sysctl.d, tmpfiles.d, ...). Un dir por ruta. |
 | `config/` | Dotfiles de usuario que se sincronizan a `~/.config` (con backup). `hypr/` apunta al repo externo `xscriptor-colors/hyprland` (ADR-0005), instalado via `tools/hyprland-install.sh`. |
+| `migrations/` | Migraciones por usuario idempotentes (`<timestamp>-<nombre>.sh`), aplicadas por `x migrate`. |
+| `themes/` | Almacen de temas: `themes/<nombre>/colors` (clave=hex), aplicado por `x theme set`. |
 | `hardware/` | Modulos autocontenidos: `nvidia.sh`, `qemu.sh`. |
 | `tools/` | Toolchains/instaladores opcionales por usuario: `node.sh` (fnm), `hyprland-install.sh` (config Hyprland desde repo externo). |
 | `wsl/` | Bootstrap WSL (conservado; se unificara con el payload mas adelante). |

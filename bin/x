@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Despachador del CLI x. Cada subcomando vive en bin/x-<grupo>-<verbo>.sh con
+# metadatos en comentarios del encabezado:
+#   # x:summary=una linea
+#   # x:aliases=alias1 alias2   (opcional)
+#   # x:root=true|false         (opcional; true exige root)
+# Anadir un comando = crear un archivo en bin/. No hay registro central.
+
+X_BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export X_BIN
+export X_CLI=1
+
+meta() {
+    local f="$1" k="$2" line
+    while IFS= read -r line; do
+        case "$line" in
+            "# x:$k="*) printf '%s' "${line#"# x:$k="}" ; return 0 ;;
+        esac
+    done < <(head -n 60 "$f")
+    return 0
+}
+
+list_cmds() {
+    ls -1 "$X_BIN"/x-*.sh 2>/dev/null | sed 's#^.*/x-##; s#\.sh$##'
+}
+
+show_help() {
+    echo "x - CLI de aprovisionamiento del sistema x"
+    echo
+    echo "Uso: x <comando> [argumentos]"
+    echo
+    echo "Comandos:"
+    local c f s
+    while IFS= read -r c; do
+        f="$X_BIN/x-$c.sh"
+        s="$(meta "$f" summary)"
+        printf '  %-14s %s\n' "${c//-/ }" "${s:-}"
+    done < <(list_cmds | sort)
+    echo
+    echo "Ayuda: x help"
+}
+
+resolve() {
+    local -a tokens=("$@")
+    local join="" f n="${#tokens[@]}" i al a
+    for ((i = 0; i < n; i++)); do
+        join="${join:+$join-}${tokens[i]}"
+        f="$X_BIN/x-$join.sh"
+        if [[ -x "$f" ]]; then
+            CONSUMED=$((i + 1))
+            CMD_FILE="$f"
+            return 0
+        fi
+    done
+    for f in "$X_BIN"/x-*.sh; do
+        al="$(meta "$f" aliases)"
+        for a in $al; do
+            if [[ "$a" == "${tokens[0]}" ]]; then
+                CONSUMED=1
+                CMD_FILE="$f"
+                return 0
+            fi
+        done
+    done
+    return 1
+}
+
+if (( $# == 0 )); then
+    show_help
+    exit 0
+fi
+
+case "$1" in
+    -h|--help|help|list)
+        show_help
+        exit 0
+        ;;
+esac
+
+CONSUMED=0
+CMD_FILE=""
+if ! resolve "$@"; then
+    echo "x: comando desconocido: $1" >&2
+    echo >&2
+    show_help >&2
+    exit 1
+fi
+
+if [[ "$(meta "$CMD_FILE" root)" == "true" && "$(id -u)" -ne 0 ]]; then
+    echo "x: '$1' requiere root (re-ejecuta con sudo)" >&2
+    exit 1
+fi
+
+shift "$CONSUMED"
+exec bash "$CMD_FILE" "$@"

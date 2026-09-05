@@ -23,7 +23,8 @@ check() {
 echo "== sintaxis =="
 while IFS= read -r f; do
     check "sintaxis $f" bash -n "$f"
-done < <(find "$SRC/install" "$SRC/hardware" "$SRC/tools" -name '*.sh' | sort)
+done < <(find "$SRC/install" "$SRC/hardware" "$SRC/tools" "$SRC/bin" -name '*.sh' | sort)
+check "sintaxis despachador" bash -n "$SRC/bin/x"
 
 echo "== helpers =="
 source "$SRC/install/helpers/sync.sh"
@@ -72,6 +73,57 @@ check "mapea modo dotfiles" grep -q -- '--dotfiles-only' "$TMP/hypr.out"
 X_HYPR_DRYRUN=1 X_HYPR_SOURCE="$FAKE_HYPR" X_HYPR_MODE=full \
     bash "$SRC/tools/hyprland-install.sh" > "$TMP/hypr2.out" 2>&1
 check "modo full sin flags" grep -q 'install.sh  en' "$TMP/hypr2.out"
+
+echo "== CLI =="
+chmod +x "$SRC"/bin/x "$SRC"/bin/*.sh
+
+# Comando desconocido -> codigo de salida 1.
+if bash "$SRC/bin/x" comando-inexistente >/dev/null 2>&1; then
+    check "comando desconocido falla" false
+else
+    check "comando desconocido falla" true
+fi
+
+HELP_OUT="$(bash "$SRC/bin/x" help)"
+THEME_OUT="$(bash "$SRC/bin/x" theme list)"
+check "help lista theme list" grep -q "theme list" <<< "$HELP_OUT"
+check "theme list muestra x-dark" grep -q "x-dark" <<< "$THEME_OUT"
+
+# theme set con overrides a tmp.
+export X_STATE_DIR="$TMP/state"
+export X_THEME_CONF="$TMP/home2/.config/x/theme.conf"
+bash "$SRC/bin/x" theme set x-dark
+check "theme set aplica paleta" grep -q "^primary=89b4fa" "$X_THEME_CONF"
+check "theme set registra activo" test "$(cat "$X_STATE_DIR/theme")" = "x-dark"
+if bash "$SRC/bin/x" theme set inexistente >/dev/null 2>&1; then
+    check "theme set inexistente falla" false
+else
+    check "theme set inexistente falla" true
+fi
+
+# migrate: una buena (idempotente) y una que falla (no se marca).
+export X_STATE_DIR="$TMP/state"
+MIG_OK="$TMP/mig-ok"
+mkdir -p "$MIG_OK"
+printf '#!/usr/bin/env bash\nmkdir -p "$HOME/.x-migrado"\n' > "$MIG_OK/20260905120000-bueno.sh"
+
+export X_MIGRATIONS_DIR="$MIG_OK"
+check "migrate aplica y marca" bash "$SRC/bin/x" migrate >/dev/null 2>&1
+check "migracion queda marcada" test -f "$X_STATE_DIR/migrations/20260905120000-bueno"
+check "migrate idempotente (2a pasada)" bash "$SRC/bin/x" migrate >/dev/null 2>&1
+
+MIG_BAD="$TMP/mig-bad"
+mkdir -p "$MIG_BAD"
+printf '#!/usr/bin/env bash\nexit 3\n' > "$MIG_BAD/20260905130000-malo.sh"
+export X_MIGRATIONS_DIR="$MIG_BAD"
+if bash "$SRC/bin/x" migrate >/dev/null 2>&1; then
+    check "migracion fallida sale en error" false
+else
+    check "migracion fallida sale en error" true
+fi
+check "migracion fallida no se marca" test ! -f "$X_STATE_DIR/migrations/20260905130000-malo"
+
+unset X_MIGRATIONS_DIR
 
 if [[ "$FAIL" -eq 0 ]]; then
     echo "smoke: OK"

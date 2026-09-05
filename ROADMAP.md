@@ -18,10 +18,16 @@ Este fichero refleja los entregables que tocan a este repo.
 
 ## Fase 3 — CLI x, migraciones y temas (reboot)
 
-- [ ] CLI `x <grupo> <verbo>` por convención de nombres y metadatos en
-      comentarios (sin registro central).
-- [ ] Migraciones por usuario idempotentes (markers + timestamps) en `x update`.
-- [ ] Temas por paleta (`colors`) + plantillas retintadas.
+- [x] CLI `x` en `bin/` con despacho por convención de nombres y metadatos en
+      comentarios (sin registro central). Comandos: setup, theme (list/set),
+      migrate, update, hardware, info. Docs en `docs/CLI.md`.
+- [x] Migraciones por usuario idempotentes (markers + timestamps) integradas
+      en `x migrate` y `x update`.
+- [x] Temas por paleta (`themes/<nombre>/colors`) aplicados por `x theme set`
+      a `~/.config/x/theme.conf`.
+- [x] Tests locales del CLI (despacho, migraciones, temas) en `test/smoke.sh`.
+- [ ] Conectar la paleta del sistema con los consumidores reales (la config de
+      Hyprland externa gestiona sus propias paletas).
 
 ## WSL
 
