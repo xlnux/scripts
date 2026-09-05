@@ -1,0 +1,24 @@
+# Maintainer: Xscriptor <dev@xscriptor.com>
+pkgname=x-scripts
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="x provisioning payload and CLI (reboot)"
+arch=('any')
+url="https://github.com/xlnux/scripts"
+license=('MIT')
+depends=('bash')
+source=()
+md5sums=()
+
+package() {
+    local dest="$pkgdir/usr/share/x"
+    install -d "$dest" "$pkgdir/usr/bin"
+
+    for d in bin install skel etc config hardware tools migrations themes; do
+        [ -e "$startdir/../$d" ] && cp -a "$startdir/../$d" "$dest/"
+    done
+
+    find "$dest/bin" "$dest/install" "$dest/hardware" "$dest/tools" -type f \( -name '*.sh' -o -name 'x' \) -exec chmod +x {} +
+
+    ln -s /usr/share/x/bin/x "$pkgdir/usr/bin/x"
+}
