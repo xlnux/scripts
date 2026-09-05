@@ -1,46 +1,46 @@
 # x — CLI
 
-`x` es el CLI de aprovisionamiento del sistema (ver concepto de CLI en la
-conversacion; ADR-0003). Vive en `bin/` de este repo y se instalara como
-`/usr/bin/x` al empaquetar el payload.
+`x` is the system provisioning CLI (see the CLI concept in the conversation;
+ADR-0003). It lives in `bin/` of this repo and will be installed as
+`/usr/bin/x` when the payload is packaged.
 
-## Comandos
+## Commands
 
-| Comando | Descripcion |
+| Command | Description |
 |---------|-------------|
-| `x setup` | Aprovisiona el sistema (root): fases config/hardware/login/post-install. |
-| `x setup --user` | Provision del usuario actual (dotfiles + opciones). |
-| `x theme list` | Lista temas disponibles. |
-| `x theme set <nombre>` | Aplica un tema (paleta) al usuario. |
-| `x migrate` | Ejecuta migraciones pendientes del usuario. |
-| `x update` | `pacman -Syu` + migraciones. |
-| `x hardware` | Fase de hardware (deteccion + modulos). |
-| `x info` | Info del sistema/entorno. |
-| `x help` | Ayuda. |
+| `x setup` | Provisions the system (root): config/hardware/login/post-install phases. |
+| `x setup --user` | Provisioning of the current user (dotfiles + options). |
+| `x theme list` | Lists available themes. |
+| `x theme set <name>` | Applies a theme (palette) to the user. |
+| `x migrate` | Runs the user's pending migrations. |
+| `x update` | `pacman -Syu` + migrations. |
+| `x hardware` | Hardware phase (detection + modules). |
+| `x info` | System/environment info. |
+| `x help` | Help. |
 
-## Anadir un comando
+## Adding a command
 
-Crear `bin/x-<grupo>-<verbo>.sh` (ejecutable) con metadatos en el encabezado:
+Create `bin/x-<group>-<verb>.sh` (executable) with metadata in the header:
 
 ```bash
 #!/usr/bin/env bash
-# x:summary=una linea
-# x:args=[--opcion]
+# x:summary=one line
+# x:args=[--option]
 # x:aliases=alias1 alias2
 # x:root=true
 set -euo pipefail
 ```
 
-- `x:summary` (usado en `x help`).
-- `x:aliases` opcional (p. ej. `theme` → `x-theme-list.sh`).
-- `x:root=true` hace que el despachador exija root.
+- `x:summary` (used in `x help`).
+- `x:aliases` optional (e.g. `theme` → `x-theme-list.sh`).
+- `x:root=true` makes the dispatcher require root.
 
-El despachador resuelve por el nombre del fichero: `x theme set nord` → busca
-`x-theme-set.sh` (despues `x-theme.sh`, luego `x.sh`-alias) y pasa el resto de
-argumentos. No hay registro central: anadir un comando = anadir un archivo.
+The dispatcher resolves by file name: `x theme set nord` → looks for
+`x-theme-set.sh` (then `x-theme.sh`, then the `x.sh`-alias) and passes the
+remaining arguments. There is no central registry: adding a command means
+adding a file.
 
-## Estado
+## State
 
-`~/.local/state/x/` guarda estado del usuario (migraciones aplicadas, tema
-activo). `~/.config/x/` guarda la config de usuario generada (p. ej.
-`theme.conf`).
+`~/.local/state/x/` stores user state (applied migrations, active theme).
+`~/.config/x/` stores generated user config (e.g. `theme.conf`).

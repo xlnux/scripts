@@ -1,38 +1,38 @@
 # x — scripts ROADMAP
 
-El desarrollo se guía por el **ROADMAP del workspace** (`x-lnux/ROADMAP.md`).
-Este fichero refleja los entregables que tocan a este repo.
+Development is driven by the **workspace ROADMAP** (`x-lnux/ROADMAP.md`).
+This file reflects the deliverables that belong to this repo.
 
-## Fase 2 — Payload de aprovisionamiento (reboot)
+## Phase 2 — Provisioning payload (reboot)
 
-- [x] Estructura por fases en `install/` (system.sh, config.sh, hardware.sh,
-      login.sh, post-install.sh, user.sh) con helpers de sync idempotentes.
-- [x] Semillas `skel/`, `etc/` y `config/` (con placeholder de Hyprland,
+- [x] Phased structure under `install/` (system.sh, config.sh, hardware.sh,
+      login.sh, post-install.sh, user.sh) with idempotent sync helpers.
+- [x] `skel/`, `etc/` and `config/` seeds (with Hyprland placeholder,
       ADR-0005).
-- [x] Migrados los modulos legacy a `hardware/` (nvidia, qemu) y `tools/`
-      (node); eliminado `x.sh` monolítico.
-- [x] Lista `x-base.packages` legible por el builder.
-- [x] Test local sin root (`test/smoke.sh`): sintaxis + helpers de sync.
-- [ ] Envolver el payload en un paquete `x-scripts` con `xpkg` (Fase 4) y
-      consumirlo desde la distro (Fase 5).
+- [x] Legacy modules migrated to `hardware/` (nvidia, qemu) and `tools/`
+      (node); monolithic `x.sh` removed.
+- [x] `x-base.packages` list readable by the builder.
+- [x] Local test without root (`test/smoke.sh`): syntax + sync helpers.
+- [ ] Wrap the payload in an `x-scripts` package with `xpkg` (Phase 4) and
+      consume it from the distro (Phase 5).
 
-## Fase 3 — CLI x, migraciones y temas (reboot)
+## Phase 3 — x CLI, migrations and themes (reboot)
 
-- [x] CLI `x` en `bin/` con despacho por convención de nombres y metadatos en
-      comentarios (sin registro central). Comandos: setup, theme (list/set),
-      migrate, update, hardware, info. Docs en `docs/CLI.md`.
-- [x] Migraciones por usuario idempotentes (markers + timestamps) integradas
-      en `x migrate` y `x update`.
-- [x] Temas por paleta (`themes/<nombre>/colors`) aplicados por `x theme set`
-      a `~/.config/x/theme.conf`.
-- [x] Tests locales del CLI (despacho, migraciones, temas) en `test/smoke.sh`.
-- [ ] Conectar la paleta del sistema con los consumidores reales (la config de
-      Hyprland externa gestiona sus propias paletas).
+- [x] `x` CLI in `bin/` with dispatch by naming convention and header-comment
+      metadata (no central registry). Commands: setup, theme (list/set),
+      migrate, update, hardware, info. Docs in `docs/CLI.md`.
+- [x] Per-user idempotent migrations (markers + timestamps) wired into
+      `x migrate` and `x update`.
+- [x] Palette-based themes (`themes/<name>/colors`) applied by `x theme set`
+      to `~/.config/x/theme.conf`.
+- [x] Local CLI tests (dispatch, migrations, themes) in `test/smoke.sh`.
+- [ ] Connect the system palette with the real consumers (the external
+      Hyprland config manages its own palettes).
 
 ## WSL
 
-- [ ] Unificar el bootstrap de `wsl/` con las fases del payload.
+- [ ] Unify the `wsl/` bootstrap with the payload phases.
 
-## Calidad
+## Quality
 
-- [ ] Shellcheck en CI para todo `install/`, `hardware/`, `tools/`.
+- [ ] Shellcheck in CI for all of `install/`, `hardware/`, `tools/`.

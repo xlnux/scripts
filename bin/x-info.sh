@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# x:summary=Muestra informacion del sistema y del entorno x
+# x:summary=Shows system and x environment info
 # x:aliases=info status doctor
 # x:root=false
 set -euo pipefail
@@ -13,13 +13,13 @@ if git -C "$X_ROOT" rev-parse --short HEAD >/dev/null 2>&1; then
 fi
 
 echo "x $(basename "$X_ROOT") $version"
-echo "repos: $X_ROOT"
-echo "user : $(id -un) ($(id -u))"
+echo "repo: $X_ROOT"
+echo "user: $(id -un) ($(id -u))"
 
 if command -v pacman >/dev/null 2>&1; then
-    echo "dist : arch (paquetes: $(pacman -Q 2>/dev/null | wc -l))"
+    echo "dist: arch (packages: $(pacman -Q 2>/dev/null | wc -l))"
 else
-    echo "dist : no-pacman"
+    echo "dist: no-pacman"
 fi
 
 theme_file="${X_STATE_DIR:-$HOME/.local/state/x}/theme"

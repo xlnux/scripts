@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# x:summary=Ejecuta las migraciones pendientes del usuario
+# x:summary=Runs the user's pending migrations
 # x:aliases=migrate migrations
 # x:root=false
 set -euo pipefail
 
-# Las migraciones viven en migrations/<timestamp>-<nombre>.sh y son
-# idempotentes. Una migracion ejecutada con exito se marca en
-# ~/.local/state/x/migrations/<nombre> y no se vuelve a correr.
+# Migrations live in migrations/<timestamp>-<name>.sh and are idempotent.
+# A migration that ran successfully is marked in
+# ~/.local/state/x/migrations/<name> and is not run again.
 
 X_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="${X_MIGRATIONS_DIR:-$X_ROOT/migrations}"
 STATE_DIR="${X_STATE_DIR:-$HOME/.local/state/x}"
 
 if [[ ! -d "$MIGRATIONS_DIR" ]] || [[ -z "$(find "$MIGRATIONS_DIR" -name '*.sh' | head -1)" ]]; then
-    echo "x migrate: no hay migraciones"
+    echo "x migrate: no migrations"
     exit 0
 fi
 
@@ -27,14 +27,14 @@ for m in "$MIGRATIONS_DIR"/*.sh; do
     if [[ -f "$marker" ]]; then
         continue
     fi
-    echo "x migrate: aplicando $name"
+    echo "x migrate: applying $name"
     if bash "$m"; then
         : > "$marker"
     else
-        echo "x migrate: fallo en $name" >&2
+        echo "x migrate: failed on $name" >&2
         failed=1
     fi
 done
 
 [[ "$failed" -eq 0 ]] || exit 1
-echo "x migrate: sin migraciones pendientes"
+echo "x migrate: no pending migrations"

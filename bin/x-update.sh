@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# x:summary=Actualiza el sistema y aplica migraciones
+# x:summary=Updates the system and runs migrations
 # x:aliases=update upgrade up
 # x:root=false
 set -euo pipefail
@@ -17,10 +17,10 @@ run_privileged() {
 }
 
 if command -v pacman >/dev/null 2>&1; then
-    echo "x update: sincronizando repos y actualizando"
+    echo "x update: syncing repos and updating"
     run_privileged pacman -Syu --noconfirm
 else
-    echo "x update: pacman no presente (skip)"
+    echo "x update: pacman not present (skip)"
 fi
 
 if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" ]]; then
@@ -29,4 +29,4 @@ else
     bash "$X_BIN/x-migrate.sh"
 fi
 
-echo "x update: listo"
+echo "x update: done"

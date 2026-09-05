@@ -18,7 +18,7 @@ alias gd='git diff'
 alias gp='git pull'
 alias gf='git fetch'
 
-# Si se usa zsh, cargar tambien este rc.
+# If zsh is in use, also load this rc.
 if [ -n "$ZSH_VERSION" ]; then
     true
 fi

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# x:summary=Ejecuta la fase de hardware (deteccion + modulos)
+# x:summary=Runs the hardware phase (detection + modules)
 # x:aliases=hardware hw
 # x:root=true
 set -euo pipefail

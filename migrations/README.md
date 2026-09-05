@@ -1,23 +1,24 @@
-# x — migraciones
+# x — migrations
 
-Las migraciones son scripts bash **idempotentes**, uno por cambio de configuracion
-del usuario, nombrados `migrations/<timestamp>-<nombre>.sh`.
+Migrations are **idempotent** bash scripts, one per user configuration change,
+named `migrations/<timestamp>-<name>.sh`.
 
-## Contrato
+## Contract
 
-- Se ejecutan por usuario (`x migrate`) y tambien al final de `x update`.
-- Una migracion aplicada con exito se marca en
-  `~/.local/state/x/migrations/<nombre>` y no se vuelve a ejecutar.
-- Deben ser seguras de repetir (aunque el marker ya exista, no romper) y no
-  depender de red ni de infraestructura externa.
-- Si una migracion falla, `x migrate` detiene el informe con error y no marca.
+- They run per user (`x migrate`) and also at the end of `x update`.
+- A migration applied successfully is marked in
+  `~/.local/state/x/migrations/<name>` and is not run again.
+- They must be safe to repeat (even if the marker already exists, do not
+  break) and must not depend on the network or external infrastructure.
+- If a migration fails, `x migrate` reports the error and does not mark it.
 
-## Como anadir una
+## How to add one
 
 ```bash
 # migrations/20260905120000-config-x.sh
 mkdir -p "$HOME/.config/x"
-# ... cambio idempotente ...
+# ... idempotent change ...
 ```
 
-Creadas bajo `x/reboot` del repo; se empaquetan con el resto del payload.
+Created under the repo's `x/reboot`; they are packaged with the rest of the
+payload.

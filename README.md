@@ -1,38 +1,38 @@
 # x — scripts
 
-Aprovisionamiento del sistema **x** por scripts (estilo Omarchy, sin
-instalador gráfico). Convivencia con la distro en `xlnux/x` y el tooling en
-`xpkg`/`xpm`/`x-repo` (ver `AGENTS.md`/`DECISIONS.md` del workspace).
+Provisioning of the **x** system through scripts (Omarchy style, no graphical
+installer). It lives alongside the distro in `xlnux/x` and the tooling in
+`xpkg`/`xpm`/`x-repo` (see `AGENTS.md`/`DECISIONS.md` at the workspace root).
 
-## Contenido
+## Contents
 
-- `install/` — orquestadores por fases (config, hardware, login,
-  post-install, usuario) y helpers de sync idempotentes.
-- `skel/` + `etc/` + `config/` — semillas de dotfiles: `/etc/skel`, drop-ins
-  de `/etc` y `~/.config` (incluye el placeholder de Hyprland).
-- `hardware/`, `tools/` — modulos opcionales (NVIDIA, QEMU/libvirt, node).
-- `wsl/` — bootstrap WSL.
-- `test/` — tests locales sin root.
+- `install/` — phase orchestrators (config, hardware, login,
+  post-install, user) and idempotent sync helpers.
+- `skel/` + `etc/` + `config/` — dotfile seeds: `/etc/skel`, `/etc`
+  drop-ins and `~/.config` (includes the Hyprland placeholder).
+- `hardware/`, `tools/` — optional modules (NVIDIA, QEMU/libvirt, node).
+- `wsl/` — WSL bootstrap.
+- `test/` — local tests without root.
 
-Detalles de estructura y mecánica en `docs/LAYOUT.md`.
+Structure and mechanics details in `docs/LAYOUT.md`.
 
-## Uso
+## Usage
 
 ```bash
-# CLI (desde el repo o instalado como /usr/bin/x)
+# CLI (from the repo or installed as /usr/bin/x)
 bash bin/x help
-bash bin/x setup            # sistema (root)
-bash bin/x setup --user     # usuario actual
+bash bin/x setup            # system (root)
+bash bin/x setup --user     # current user
 bash bin/x theme set x-dark
 bash bin/x migrate
 bash bin/x update
 
-# Directo por fases (equivalentes)
+# Direct per phase (equivalent)
 sudo bash install/system.sh
 X_NODE=1 bash install/user.sh
 ```
 
-## Estado
+## Status
 
-Iniciativa *reboot* en rama `x/reboot`. Fases y decisiones en el ROADMAP y
-DECISIONS de la raíz del workspace `x-lnux`.
+*reboot* initiative on the `x/reboot` branch. Phases and decisions in the
+ROADMAP and DECISIONS at the workspace root `x-lnux`.

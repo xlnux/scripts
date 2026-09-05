@@ -1,45 +1,44 @@
 # x — scripts (layout)
 
-Repo de **aprovisionamiento** del sistema x (vía scripts, sin instalador
-gráfico; ver ADR-0001/ADR-0003 en `DECISIONS.md` del workspace).
+**Provisioning** repo of the x system (via scripts, no graphical installer;
+see ADR-0001/ADR-0003 in `DECISIONS.md` at the workspace root).
 
-## Arbol
+## Tree
 
-| Ruta | Papel |
-|------|-------|
-| `bin/` | CLI `x` (despachador + subcomandos `x-*.sh` por convencion). Ver `docs/CLI.md`. |
-| `install/` | Orquestadores del aprovisionamiento por fases. |
-| `install/helpers/` | Librerias bash: `common.sh` (log/privilegios/root) y `sync.sh` (sync de arboles idempotente). |
-| `install/system.sh` | Entry root: encadena `config.sh` → `hardware.sh` → `login.sh` → `post-install.sh`. |
-| `install/config.sh` | Root: siembra `/etc/skel` desde `skel/` y aplica el overlay de `/etc` desde `etc/`. |
-| `install/hardware.sh` | Root: detecta/ejecuta los modulos de `hardware/`. |
-| `install/login.sh` | Root: servicios base (NetworkManager, ...). |
-| `install/post-install.sh` | Root: branding final (se integrara con `x-release`). |
-| `install/user.sh` | Provision de usuario (delega en `user-seed.sh` si corre como root). |
-| `install/user-seed.sh` | Siembra el home: `x_seed_home` desde `/etc/skel` y `x_sync_config` de `config/` a `~/.config`. |
-| `install/x-base.packages` | Lista de paquetes base legible por el builder (uno por linea). |
-| `skel/` | Seed de `/etc/skel` para usuarios nuevos. |
-| `etc/` | Drop-ins de `/etc` (sysctl.d, tmpfiles.d, ...). Un dir por ruta. |
-| `config/` | Dotfiles de usuario que se sincronizan a `~/.config` (con backup). `hypr/` apunta al repo externo `xscriptor-colors/hyprland` (ADR-0005), instalado via `tools/hyprland-install.sh`. |
-| `migrations/` | Migraciones por usuario idempotentes (`<timestamp>-<nombre>.sh`), aplicadas por `x migrate`. |
-| `themes/` | Almacen de temas: `themes/<nombre>/colors` (clave=hex), aplicado por `x theme set`. |
-| `hardware/` | Modulos autocontenidos: `nvidia.sh`, `qemu.sh`. |
-| `tools/` | Toolchains/instaladores opcionales por usuario: `node.sh` (fnm), `hyprland-install.sh` (config Hyprland desde repo externo). |
-| `wsl/` | Bootstrap WSL (conservado; se unificara con el payload mas adelante). |
-| `test/` | Tests locales sin root. |
+| Path | Role |
+|------|------|
+| `bin/` | `x` CLI (dispatcher + `x-*.sh` subcommands by convention). See `docs/CLI.md`. |
+| `install/` | Provisioning orchestrators per phase. |
+| `install/helpers/` | Bash libraries: `common.sh` (log/privileges/root) and `sync.sh` (idempotent tree sync). |
+| `install/system.sh` | Root entry: chains `config.sh` → `hardware.sh` → `login.sh` → `post-install.sh`. |
+| `install/config.sh` | Root: seeds `/etc/skel` from `skel/` and applies the `/etc` overlay from `etc/`. |
+| `install/hardware.sh` | Root: detects/runs the modules under `hardware/`. |
+| `install/login.sh` | Root: base services (NetworkManager, ...). |
+| `install/post-install.sh` | Root: final branding (will integrate with `x-release`). |
+| `install/user.sh` | User provisioning (delegates to `user-seed.sh` when run as root). |
+| `install/user-seed.sh` | Seeds the home: `x_seed_home` from `/etc/skel` and `x_sync_config` from `config/` to `~/.config`. |
+| `install/x-base.packages` | Base package list readable by the builder (one per line). |
+| `skel/` | `/etc/skel` seed for new users. |
+| `etc/` | `/etc` drop-ins (sysctl.d, tmpfiles.d, ...). One dir per path. |
+| `config/` | User dotfiles synced to `~/.config` (with backup). `hypr/` points to the external repo `xscriptor-colors/hyprland` (ADR-0005), installed via `tools/hyprland-install.sh`. |
+| `migrations/` | Per-user idempotent migrations (`<timestamp>-<name>.sh`), applied by `x migrate`. |
+| `themes/` | Theme store: `themes/<name>/colors` (key=hex), applied by `x theme set`. |
+| `hardware/` | Self-contained modules: `nvidia.sh`, `qemu.sh`. |
+| `tools/` | Optional per-user toolchains/installers: `node.sh` (fnm), `hyprland-install.sh` (Hyprland config from external repo). |
+| `wsl/` | WSL bootstrap (kept; will be unified with the payload later). |
+| `test/` | Local tests without root. |
 
-## Mecanica (ADR-0003)
+## Mechanics (ADR-0003)
 
-- Fases root y de usuario separadas; cada fase es un script invocable.
-- Capas del home: seed `/etc/skel` (instalacion) → `x_seed_home` (solo lo que
-  falta) → `x_sync_config` con backup `.bak.<ts>`.
-- Todos los scripts son idempotentes; los ficheros modificados por el usuario
-  no se pisan sin dejar backup.
+- Root and user phases are separate; each phase is an invocable script.
+- Home layers: seed `/etc/skel` (install) → `x_seed_home` (only what is
+  missing) → `x_sync_config` with `.bak.<ts>` backup.
+- All scripts are idempotent; files modified by the user are not overwritten
+  without leaving a backup.
 
-## Uso
+## Usage
 
-- Como root (durante la instalacion/ISO o en un sistema ya instalado):
+- As root (during the install/ISO or on an already installed system):
   `bash install/system.sh`.
-- Como usuario (finalize): `X_NODE=1 bash install/user.sh`.
-- Extras opcionales: `X_HW_NVIDIA=1 X_HW_QEMU=1` para forzar modulos de
-  hardware.
+- As user (finalize): `X_NODE=1 bash install/user.sh`.
+- Optional extras: `X_HW_NVIDIA=1 X_HW_QEMU=1` to force hardware modules.

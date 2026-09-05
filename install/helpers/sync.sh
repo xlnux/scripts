@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# Sincronizacion de arboles de configuracion (sin rsync, bash + cp).
+# Sync of configuration trees (no rsync, bash + cp).
 
-# Copia el contenido de <src> dentro de <dest>, sobrescribiendo.
-# Se usa para semillas de primera instalacion (/etc/skel, overlay de /etc).
+# Copies the contents of <src> into <dest>, overwriting.
+# Used for first-install seeds (/etc/skel, /etc overlay).
 x_copy_tree() {
     local src="$1" dest="$2"
     [[ -d "$src" ]] || return 0
@@ -11,7 +11,7 @@ x_copy_tree() {
     cp -a "$src/." "$dest/"
 }
 
-# Siembra <home> desde <skel>: copia solo lo que falta, sin pisar lo del usuario.
+# Seeds <home> from <skel>: copies only what is missing, never overwriting user files.
 x_seed_home() {
     local skel="$1" home="$2" p
     [[ -d "$skel" ]] || return 0
@@ -29,8 +29,8 @@ x_seed_home() {
     done < <(cd "$skel" && find . -mindepth 1 | sort)
 }
 
-# Sincroniza un arbol de dotfiles a <dest>. Los ficheros existentes que
-# difieran se respaldan como <fichero>.bak.<ts> antes de sobrescribirse.
+# Syncs a dotfiles tree into <dest>. Existing files that differ are backed up
+# as <file>.bak.<ts> before being overwritten.
 x_sync_config() {
     local src="$1" dest="$2" ts rel from to
     [[ -d "$src" ]] || return 0

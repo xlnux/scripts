@@ -1,12 +1,12 @@
-# x — drop-ins de /etc
+# x — /etc drop-ins
 
-Este arbol se vuelca sobre `/etc` durante la fase de configuracion del sistema
-(`install/config.sh`). Cada subdirectorio replica una ruta de `/etc`:
+This tree is dumped onto `/etc` during the system configuration phase
+(`install/config.sh`). Each subdirectory mirrors an `/etc` path:
 
-- `sysctl.d/` — parametros de kernel.
-- `tmpfiles.d/` — ficheros/permisos temporales.
-- `sudoers.d/` — reglas de sudo.
-- `pacman.d/hooks/` — hooks de pacman propios.
+- `sysctl.d/` — kernel parameters.
+- `tmpfiles.d/` — temporary files/permissions.
+- `sudoers.d/` — sudo rules.
+- `pacman.d/hooks/` — own pacman hooks.
 
-Regla: no pisar ficheros de paquetes; usar siempre drop-ins. Un fichero ya
-modificado por el administrador no se sobrescribe.
+Rule: never overwrite package files; always use drop-ins. A file already
+modified by the administrator is not overwritten.

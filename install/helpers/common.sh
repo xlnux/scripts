@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Helpers comunes del aprovisionamiento x.
+# Common helpers for x provisioning.
 
 X_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export X_ROOT
@@ -23,7 +23,7 @@ has_cmd() {
 }
 
 x_require_root() {
-    [[ "$(id -u)" -eq 0 ]] || error "se requiere root (ejecuta con sudo o como root)."
+    [[ "$(id -u)" -eq 0 ]] || error "root required (run with sudo or as root)."
 }
 
 x_target_user() {
@@ -54,13 +54,13 @@ run_privileged() {
     elif has_cmd sudo; then
         sudo "$@"
     else
-        error "no se puede elevar privilegios (sudo ausente)"
+        error "cannot elevate privileges (sudo missing)"
     fi
 }
 
 run_as_user() {
     if [[ "${X_DRY_RUN:-0}" == "1" ]]; then
-        log "(dry-run, como usuario) $*"
+        log "(dry-run, as user) $*"
         return 0
     fi
     if [[ "$(id -u)" -eq 0 && -n "${SUDO_USER:-}" ]]; then

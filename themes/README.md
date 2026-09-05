@@ -1,18 +1,18 @@
-# x — temas
+# x — themes
 
-Cada tema es un directorio `themes/<nombre>/` con una paleta `colors`
-(formato `clave=hex`, una por linea).
+Each theme is a directory `themes/<name>/` with a `colors` palette
+(format `key=hex`, one per line).
 
-## Comandos
+## Commands
 
-- `x theme list` — lista los temas disponibles.
-- `x theme set <nombre>` — instala la paleta como `~/.config/x/theme.conf`
-  (con backup de la anterior) y registra el tema activo en
+- `x theme list` — lists the available themes.
+- `x theme set <name>` — installs the palette as `~/.config/x/theme.conf`
+  (backing up the previous one) and records the active theme in
   `~/.local/state/x/theme`.
 
-## Consumidores
+## Consumers
 
-La config de Hyprland real (repo externo) gestiona sus propias paletas
-(`dock/palettes`) y se instala por separado. Este almacen es la paleta del
-propio sistema x; los consumidores (shell, terminales, etc.) leen de
+The real Hyprland config (external repo) manages its own palettes
+(`dock/palettes`) and is installed separately. This store is the palette of
+the x system itself; consumers (shell, terminals, etc.) read from
 `~/.config/x/theme.conf`.

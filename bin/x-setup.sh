@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# x:summary=Aprovisiona el sistema (root) o el usuario (--user)
+# x:summary=Provisions the system (root) or the user (--user)
 # x:args=[--user]
 # x:root=false
 set -euo pipefail
@@ -15,7 +15,7 @@ if [[ "$(id -u)" -ne 0 ]]; then
     if command -v sudo >/dev/null 2>&1; then
         sudo bash "$X_ROOT/install/system.sh"
     else
-        echo "x setup: requiere root" >&2
+        echo "x setup: requires root" >&2
         exit 1
     fi
 else

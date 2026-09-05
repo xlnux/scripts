@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Despachador del CLI x. Cada subcomando vive en bin/x-<grupo>-<verbo>.sh con
-# metadatos en comentarios del encabezado:
-#   # x:summary=una linea
-#   # x:aliases=alias1 alias2   (opcional)
-#   # x:root=true|false         (opcional; true exige root)
-# Anadir un comando = crear un archivo en bin/. No hay registro central.
+# Dispatcher for the x CLI. Each subcommand lives in bin/x-<group>-<verb>.sh with
+# metadata in header comments:
+#   # x:summary=one line
+#   # x:aliases=alias1 alias2   (optional)
+#   # x:root=true|false         (optional; true requires root)
+# Adding a command = creating a file in bin/. There is no central registry.
 
 X_BIN="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 export X_BIN
@@ -27,11 +27,11 @@ list_cmds() {
 }
 
 show_help() {
-    echo "x - CLI de aprovisionamiento del sistema x"
+    echo "x - provisioning CLI for the x system"
     echo
-    echo "Uso: x <comando> [argumentos]"
+    echo "Usage: x <command> [arguments]"
     echo
-    echo "Comandos:"
+    echo "Commands:"
     local c f s
     while IFS= read -r c; do
         f="$X_BIN/x-$c.sh"
@@ -39,7 +39,7 @@ show_help() {
         printf '  %-14s %s\n' "${c//-/ }" "${s:-}"
     done < <(list_cmds | sort)
     echo
-    echo "Ayuda: x help"
+    echo "Help: x help"
 }
 
 resolve() {
@@ -82,14 +82,14 @@ esac
 CONSUMED=0
 CMD_FILE=""
 if ! resolve "$@"; then
-    echo "x: comando desconocido: $1" >&2
+    echo "x: unknown command: $1" >&2
     echo >&2
     show_help >&2
     exit 1
 fi
 
 if [[ "$(meta "$CMD_FILE" root)" == "true" && "$(id -u)" -ne 0 ]]; then
-    echo "x: '$1' requiere root (re-ejecuta con sudo)" >&2
+    echo "x: '$1' requires root (re-run with sudo)" >&2
     exit 1
 fi
 
