@@ -1,29 +1,32 @@
-# X Scripts Roadmap
+# x — scripts ROADMAP
 
-## Phase 1 · Core Script Reliability <!-- phase:core-reliability -->
+El desarrollo se guía por el **ROADMAP del workspace** (`x-lnux/ROADMAP.md`).
+Este fichero refleja los entregables que tocan a este repo.
 
-- [ ] Add structured logging mode for x.sh (#3)
-- [ ] Improve distro detection fallback paths (#4)
-- [ ] Add dry-run mode for safe preview of changes (#5)
-- [ ] Add rollback notes for critical system edits (#6)
+## Fase 2 — Payload de aprovisionamiento (reboot)
 
-## Phase 2 · Optional Modules in scripts/ <!-- phase:optional-modules -->
+- [x] Estructura por fases en `install/` (system.sh, config.sh, hardware.sh,
+      login.sh, post-install.sh, user.sh) con helpers de sync idempotentes.
+- [x] Semillas `skel/`, `etc/` y `config/` (con placeholder de Hyprland,
+      ADR-0005).
+- [x] Migrados los modulos legacy a `hardware/` (nvidia, qemu) y `tools/`
+      (node); eliminado `x.sh` monolítico.
+- [x] Lista `x-base.packages` legible por el builder.
+- [x] Test local sin root (`test/smoke.sh`): sintaxis + helpers de sync.
+- [ ] Envolver el payload en un paquete `x-scripts` con `xpkg` (Fase 4) y
+      consumirlo desde la distro (Fase 5).
 
-- [ ] Define stable module interface for scripts add-ons (#7)
-- [ ] Add template for new module scripts (#8)
-- [ ] Document enable/disable flow for optional modules (#9)
-- [ ] Add module-level validation checks (#10)
+## Fase 3 — CLI x, migraciones y temas (reboot)
 
-## Phase 3 · WSL Setup Experience <!-- phase:wsl-experience -->
+- [ ] CLI `x <grupo> <verbo>` por convención de nombres y metadatos en
+      comentarios (sin registro central).
+- [ ] Migraciones por usuario idempotentes (markers + timestamps) en `x update`.
+- [ ] Temas por paleta (`colors`) + plantillas retintadas.
 
-- [ ] Unify install and setup logging for wsl scripts (#11)
-- [ ] Add preflight checks for supported WSL distributions (#12)
-- [ ] Add optional profile presets for shell configuration (#13)
-- [ ] Improve post-install summary with next-step commands (#14)
+## WSL
 
-## Phase 4 · Automation and Quality <!-- phase:automation-quality -->
+- [ ] Unificar el bootstrap de `wsl/` con las fases del payload.
 
-- [ ] Add shellcheck validation in CI (#15)
-- [ ] Add smoke test workflow for x.sh basic execution path (#16)
-- [ ] Add roadmap sync workflow from xgh module (#17)
-- [ ] Add contribution checklist for script safety and idempotency (#18)
+## Calidad
+
+- [ ] Shellcheck en CI para todo `install/`, `hardware/`, `tools/`.

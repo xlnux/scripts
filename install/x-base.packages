@@ -1,0 +1,11 @@
+# Paquetes base que el aprovisionamiento garantiza en el sistema.
+# Lista legible por el builder de la ISO / instalador (una por linea).
+
+git
+zsh
+curl
+wget
+jq
+unzip
+zstd
+which

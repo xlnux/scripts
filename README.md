@@ -1,32 +1,32 @@
-# X Scripts
+# x — scripts
 
-This repository contains system scripts for XOS. The primary entrypoint is `x.sh`, which configures and refreshes the environment after a reboot. An in-progress `scripts` directory will host optional add-ons and extra configurations.
+Aprovisionamiento del sistema **x** por scripts (estilo Omarchy, sin
+instalador gráfico). Convivencia con la distro en `xlnux/x` y el tooling en
+`xpkg`/`xpm`/`x-repo` (ver `AGENTS.md`/`DECISIONS.md` del workspace).
 
-## x.sh (Base Script)
+## Contenido
 
-- Purpose: Apply the latest required configurations for XOS after a reboot.
-- Responsibilities:
-  - Ensure the `x` wrapper command is installed to `/usr/bin/x` so `x <cmd>` runs with elevated privileges.
-  - Install and configure Zsh and Oh My Zsh, including useful plugins.
-  - Add shell aliases and Git/navigation helpers to user and system rc files when missing.
-  - Perform distro-aware package setup (e.g., Arch `pacman`, Debian/Ubuntu `apt`, Fedora `dnf`).
-- Usage:
-  - Run `bash x.sh` after system startup or reboot.
+- `install/` — orquestadores por fases (config, hardware, login,
+  post-install, usuario) y helpers de sync idempotentes.
+- `skel/` + `etc/` + `config/` — semillas de dotfiles: `/etc/skel`, drop-ins
+  de `/etc` y `~/.config` (incluye el placeholder de Hyprland).
+- `hardware/`, `tools/` — modulos opcionales (NVIDIA, QEMU/libvirt, node).
+- `wsl/` — bootstrap WSL.
+- `test/` — tests locales sin root.
 
-  ```bash
-  curl -sLO https://raw.githubusercontent.com/xlnux/x/main/x.sh || exit 0; chmod +x x.sh || true; ./x.sh || true
-  ```
-  
-  - After execution, reload your shell: `source ~/.bashrc` or `source ~/.zshrc`.
+Detalles de estructura y mecánica en `docs/LAYOUT.md`.
 
-## /scripts (Optional Add-ons)
+## Uso
 
-- Status: Under active development.
-- Location: `/scripts` (to be populated).
-- Purpose: Host optional and modular configurations that can be added to XOS on demand, without being part of the base setup.
-- Expected Contents:
-  - Feature-specific setup scripts.
-  - Integration helpers for additional tools and workflows.
-  - Experimental or in-progress modules that can be enabled selectively.
+```bash
+# Provision del sistema (root)
+sudo bash install/system.sh
 
-As this directory is under construction, interfaces and available scripts are subject to change. Contributions and iterations are ongoing as we develop these optional components.
+# Provision del usuario actual (finalize)
+X_NODE=1 bash install/user.sh
+```
+
+## Estado
+
+Iniciativa *reboot* en rama `x/reboot`. Fases y decisiones en el ROADMAP y
+DECISIONS de la raíz del workspace `x-lnux`.
