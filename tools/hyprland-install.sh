@@ -64,7 +64,7 @@ OFFICIAL=(
     hyprland     hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     xdg-desktop-portal-wlr qt5-wayland qt6-wayland qt5ct qt6ct
     polkit-kde-agent hyprpolkitagent swayosd quickshell xorg-xwayland sddm
-    rofi-wayland jq imagemagick librsvg
+    rofi jq imagemagick librsvg
     kitty dunst grim slurp wl-clipboard cliphist brightnessctl pamixer
     playerctl hyprpicker libnotify iproute2 pciutils pavucontrol networkmanager
     pipewire pipewire-alsa pipewire-pulse wireplumber network-manager-applet
@@ -77,7 +77,7 @@ OFFICIAL=(
 )
 
 AUR=(
-    adw-gtk3 bibata-cursor-theme mpvpaper networkmanager-dmenu-git
+    bibata-cursor-theme mpvpaper networkmanager-dmenu-git
 )
 
 echo "== official packages"
