@@ -3,35 +3,33 @@ set -euo pipefail
 
 # Non-interactive Hyprland setup for X Linux.
 #
-# Uses the external repo xscriptor-colors/hyprland (branch main) as a READ-ONLY
-# source for configs: it clones it to a temp dir, strips .git/.github and
-# deploys what is needed, installing required packages. The external repo is
-# never modified nor committed.
+# The external repo xscriptor-colors/hyprland (branch main) is used READ-ONLY
+# as a source for configs: cloned to a temp dir, .git/.github stripped, and
+# everything needed is installed/deployed. The external repo is never modified
+# or committed.
+#
+# Runs as the TARGET USER (never as root): root operations go through sudo.
 #
 # Env:
-#   X_HYPR_USER       target user when running as root (default: $USER)
 #   X_HYPR_NVIDIA     auto-configure NVIDIA when detected (default: 1)
 #   X_HYPR_WALLPAPERS download the 1.37GB wallpaper pack (default: 0)
 #   X_HYPR_SOURCE     local copy override (for tests/dev)
-#   X_HYPR_DRYRUN     1 = fetch/cleanup and print plan only
+#   X_HYPR_REF        branch/commit (default: main)
+#   X_HYPR_DRYRUN     1 = fetch/cleanup and print the plan only
 #   X_HYPR_KEEP_SRC   1 = keep the temp copy
 
 source "$(dirname "${BASH_SOURCE[0]}")/../install/helpers/common.sh"
 
-UPSTREAM_URL="https://github.com/xscriptor-colors/hyprland.git"
-X_HYPR_REF="${X_HYPR_REF:-main}"
-
 if [[ "$(id -u)" -eq 0 ]]; then
-    TARGET_USER="${X_HYPR_USER:-$(x_target_user)}"
-else
-    TARGET_USER="$(id -un)"
+    error "hyprland setup must run as the target user, not root"
 fi
-TARGET_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6)"
-[[ -n "$TARGET_HOME" ]] || error "cannot resolve home for $TARGET_USER"
 
-log "hyprland setup for user $TARGET_USER ($TARGET_HOME)"
+X_HYPR_REF="${X_HYPR_REF:-main}"
+UPSTREAM_URL="https://github.com/xscriptor-colors/hyprland.git"
 
-# --- fetch source -----------------------------------------------------------
+root() { sudo "$@"; }
+
+# --- fetch source (in the user's own cache) ----------------------------------
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/x"
 mkdir -p "$CACHE"
 SRC="${X_HYPR_SOURCE:-}"
@@ -53,156 +51,135 @@ if [[ "${X_HYPR_DRYRUN:-0}" == "1" ]]; then
     exit 0
 fi
 
-# --- official packages ------------------------------------------------------
-PAC_OFFICIAL=(
+# --- package split: official (repos) vs AUR -----------------------------------
+OFFICIAL=(
     hyprland hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     xdg-desktop-portal-wlr qt5-wayland qt6-wayland qt5ct qt6ct
-    polkit-kde-agent xorg-xwayland sddm
-    rofi-wayland jq imagemagick librsvg kitty dunst grim slurp wl-clipboard
-    cliphist brightnessctl pamixer playerctl hyprpicker libnotify iproute2
-    pciutils pavucontrol networkmanager pipewire pipewire-alsa pipewire-pulse
-    wireplumber network-manager-applet blueman bluez bluez-utils xdg-utils
-    xdg-user-dirs wget curl gnome-keyring seahorse libsecret noto-fonts
-    noto-fonts-emoji adw-gtk3 papirus-icon-theme bibata-cursor-theme nautilus
+    polkit-kde-agent xorg-xwayland sddm rofi-wayland jq imagemagick librsvg
+    kitty dunst grim slurp wl-clipboard cliphist brightnessctl pamixer
+    playerctl hyprpicker libnotify iproute2 pciutils pavucontrol networkmanager
+    pipewire pipewire-alsa pipewire-pulse wireplumber network-manager-applet
+    blueman bluez bluez-utils xdg-utils xdg-user-dirs wget curl gnome-keyring
+    seahorse libsecret noto-fonts noto-fonts-emoji papirus-icon-theme nautilus
     gvfs gvfs-mtp cava zbar fd ripgrep socat inotify-tools acpi iw lm_sensors
-    bc python python-websockets qt6-websockets ffmpeg fastfetch yq mpvpaper
-    wmctrl power-profiles-daemon lsp-plugins gpu-screen-recorder qt5-quickcontrols
-    qt5-quickcontrols2 qt5-graphicaleffects unzip
+    bc python python-websockets qt6-websockets ffmpeg fastfetch wmctrl
+    power-profiles-daemon lsp-plugins qt5-quickcontrols qt5-quickcontrols2
+    qt5-graphicaleffects unzip
 )
 
-# AUR packages (installed via yay, non-fatal individually).
-PAC_AUR=(quickshell-git swayosd-git hyprpolkitagent networkmanager-dmenu-git)
+AUR=(
+    adw-gtk3 bibata-cursor-theme mpvpaper quickshell-git swayosd-git
+    hyprpolkitagent networkmanager-dmenu-git
+)
 
-echo "== packages (official)"
-run_privileged pacman -S --needed --noconfirm "${PAC_OFFICIAL[@]}" || warn "some official packages failed"
+echo "== official packages"
+root pacman -S --needed --noconfirm "${OFFICIAL[@]}" || warn "some official packages failed"
 
-if (( ${#PAC_AUR[@]} )); then
-    echo "== ensuring yay"
-    if ! has_cmd yay && ! has_cmd paru; then
-        run_privileged pacman -S --needed --noconfirm git base-devel >/dev/null 2>&1 || true
+if (( ${#AUR[@]} )); then
+    HELPER=""
+    has_cmd yay && HELPER="yay"
+    has_cmd paru && HELPER="paru"
+
+    if [[ -z "$HELPER" ]]; then
+        echo "== installing yay (as user)"
         YAY_TMP="$(mktemp -d)"
         git clone -q https://aur.archlinux.org/yay.git "$YAY_TMP/yay"
         (cd "$YAY_TMP/yay" && makepkg -si --noconfirm) || warn "yay build failed"
         rm -rf "$YAY_TMP"
+        has_cmd yay && HELPER="yay"
     fi
-    HELPER="paru"
-    has_cmd yay && HELPER="yay"
-    for p in "${PAC_AUR[@]}"; do
-        echo "== aur: $p"
-        run_privileged "$HELPER" -S --needed --noconfirm "$p" || warn "aur package $p failed"
-    done
+
+    if [[ -n "$HELPER" ]]; then
+        for p in "${AUR[@]}"; do
+            echo "== aur: $p ($HELPER)"
+            "$HELPER" -S --needed --noconfirm "$p" || warn "aur package $p failed"
+        done
+    else
+        warn "no AUR helper available; AUR packages skipped"
+    fi
 fi
 
-# --- NVIDIA -----------------------------------------------------------------
+# --- NVIDIA --------------------------------------------------------------
 if [[ "${X_HYPR_NVIDIA:-1}" == "1" ]] && has_cmd lspci && lspci | grep -qi nvidia; then
     echo "== nvidia detected"
-    KERNEL="$(uname -r | sed 's/-.*//')"
-    if [[ "$(uname -r)" == *lts* ]]; then
-        HEADERS="linux-lts-headers"
-    elif [[ "$(uname -r)" == *zen* ]]; then
-        HEADERS="linux-zen-headers"
-    else
-        HEADERS="linux-headers"
-    fi
-    run_privileged pacman -S --needed --noconfirm "$HEADERS" nvidia-dkms nvidia-utils \
+    case "$(uname -r)" in
+        *lts*) HEADERS="linux-lts-headers" ;;
+        *zen*) HEADERS="linux-zen-headers" ;;
+        *)     HEADERS="linux-headers" ;;
+    esac
+    root pacman -S --needed --noconfirm "$HEADERS" nvidia-dkms nvidia-utils \
         nvidia-settings libva-nvidia-driver egl-wayland envycontrol || warn "nvidia packages failed"
-    # mkinitcpio modules
-    if has_cmd mkinitcpio && [[ -f /etc/mkinitcpio.conf ]]; then
-        if ! grep -q "nvidia nvidia_modeset" /etc/mkinitcpio.conf; then
-            run_privileged sed -i 's/^MODULES=(/MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm /' /etc/mkinitcpio.conf
-        fi
+    if has_cmd mkinitcpio && [[ -f /etc/mkinitcpio.conf ]] \
+        && ! grep -q "nvidia nvidia_modeset" /etc/mkinitcpio.conf; then
+        root sed -i 's/^MODULES=(/MODULES=(nvidia nvidia_modeset nvidia_uvm nvidia_drm /' /etc/mkinitcpio.conf
+        root mkinitcpio -P || true
     fi
-    # blacklist nouveau + drm modeset
-    run_privileged bash -c 'echo "blacklist nouveau" > /etc/modprobe.d/blacklist-nouveau.conf;
+    root bash -c 'echo "blacklist nouveau" > /etc/modprobe.d/blacklist-nouveau.conf;
       echo "options nouveau modeset=0" >> /etc/modprobe.d/blacklist-nouveau.conf;
       echo "options nvidia-drm modeset=1 fbdev=1" > /etc/modprobe.d/nvidia.conf'
-    # bootloader params (systemd-boot entries first)
     if [[ -d /boot/loader/entries ]]; then
-        run_privileged bash -c 'grep -rl "" /boot/loader/entries/ | while read -r e; do
+        root bash -c 'for e in /boot/loader/entries/*.conf; do
           sed -i "/^options/ s/$/ nvidia_drm.modeset=1 nvidia.NVreg_PreserveVideoMemoryAllocations=1/" "$e"; done'
     fi
     if command -v grub-mkconfig >/dev/null 2>&1 && [[ -f /etc/default/grub ]]; then
-        run_privileged sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="nvidia_drm.modeset=1 nvidia.NVreg_PreserveVideoMemoryAllocations=1 /' /etc/default/grub
-        run_privileged grub-mkconfig -o /boot/grub/grub.cfg 2>/dev/null || true
+        root sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="nvidia_drm.modeset=1 nvidia.NVreg_PreserveVideoMemoryAllocations=1 /' /etc/default/grub
+        root grub-mkconfig -o /boot/grub/grub.cfg 2>/dev/null || true
     fi
-    run_privileged bash -c 'systemctl enable nvidia-suspend.service nvidia-hibernate.service nvidia-resume.service 2>/dev/null || true'
+    root bash -c 'systemctl enable nvidia-suspend.service nvidia-hibernate.service nvidia-resume.service 2>/dev/null || true'
 fi
 
-# --- deploy configs ----------------------------------------------------------
-echo "== deploying configs to $TARGET_HOME"
-CONFIG_DIR="$TARGET_HOME/.config"
-run_home() { # run as target user
-    if [[ "$(id -u)" -eq 0 && "$TARGET_USER" != "root" ]]; then
-        runuser -u "$TARGET_USER" -- "$@"
-    else
-        "$@"
-    fi
-}
-run_home mkdir -p "$CONFIG_DIR"
+# --- deploy configs (user-owned) ------------------------------------------
+echo "== deploying configs to $HOME"
+CONFIG_DIR="$HOME/.config"
+mkdir -p "$CONFIG_DIR" "$HOME/Pictures/Screenshots" "$HOME/Pictures/Wallpapers"
 
-deploy_tree() {
-    local src="$1" rel="$2"
-    [[ -d "$src" ]] || return 0
-    run_home cp -r "$src/." "$CONFIG_DIR/$rel/"
-}
-
-# hypr config + modules
 if [[ -d "$SRC/config/hypr" ]]; then
-    run_home mkdir -p "$CONFIG_DIR/hypr"
-    run_home cp -r "$SRC/config/hypr/." "$CONFIG_DIR/hypr/"
-    # drop legacy hyprlang leftovers
-    run_home bash -c 'rm -f "$HOME"/.config/hypr/hyprland.conf "$HOME"/.config/hypr/colors.conf \
-      "$HOME"/.config/hypr/animations.conf "$HOME"/.config/hypr/autostart.conf \
-      "$HOME"/.config/hypr/env.conf "$HOME"/.config/hypr/keybinds.conf \
-      "$HOME"/.config/hypr/theme.conf "$HOME"/.config/hypr/windowrules.conf \
-      "$HOME"/.config/hypr/workspaces.conf'
+    mkdir -p "$CONFIG_DIR/hypr"
+    cp -r "$SRC/config/hypr/." "$CONFIG_DIR/hypr/"
+    rm -f "$CONFIG_DIR"/hypr/hyprland.conf "$CONFIG_DIR"/hypr/colors.conf \
+        "$CONFIG_DIR"/hypr/animations.conf "$CONFIG_DIR"/hypr/autostart.conf \
+        "$CONFIG_DIR"/hypr/env.conf "$CONFIG_DIR"/hypr/keybinds.conf \
+        "$CONFIG_DIR"/hypr/theme.conf "$CONFIG_DIR"/hypr/windowrules.conf \
+        "$CONFIG_DIR"/hypr/workspaces.conf
 fi
-deploy_tree "$SRC/config/rofi" rofi
-deploy_tree "$SRC/config/dunst" dunst
-deploy_tree "$SRC/config/cava" cava
-deploy_tree "$SRC/config/hypridle" hypridle
-
+for rel in rofi dunst cava hypridle; do
+    [[ -d "$SRC/config/$rel" ]] && { mkdir -p "$CONFIG_DIR/$rel"; cp -r "$SRC/config/$rel/." "$CONFIG_DIR/$rel/"; }
+done
 if [[ -d "$SRC/scripts" ]]; then
-    run_home mkdir -p "$CONFIG_DIR/hypr/scripts"
-    run_home cp -r "$SRC/scripts/." "$CONFIG_DIR/hypr/scripts/"
-    run_home bash -c 'find "$HOME/.config/hypr/scripts" -type f -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true'
+    mkdir -p "$CONFIG_DIR/hypr/scripts"
+    cp -r "$SRC/scripts/." "$CONFIG_DIR/hypr/scripts/"
+    find "$CONFIG_DIR/hypr/scripts" -type f -name '*.sh' -exec chmod +x {} \; 2>/dev/null || true
 fi
+mkdir -p "$HOME/.local/state"
+printf 'LOCAL_VERSION="x-1"\n' > "$HOME/.local/state/xshell-version"
 
-# screenshots dirs
-run_home mkdir -p "$TARGET_HOME/Pictures/Screenshots" "$TARGET_HOME/Pictures/Wallpapers"
-
-# version marker
-run_home bash -c 'mkdir -p "$HOME/.local/state"; printf "LOCAL_VERSION=\"x-1\"\n" > "$HOME/.local/state/xshell-version"'
-
-# --- fonts ------------------------------------------------------------------
-echo "== font"
-if [[ ! -f "$TARGET_HOME/.local/share/fonts/HackNerdFont-Regular.ttf" ]]; then
-    run_home mkdir -p "$TARGET_HOME/.local/share/fonts"
-    run_home wget -q -O "$TARGET_HOME/.local/share/fonts/HackNerdFont-Regular.ttf" \
-        "https://raw.githubusercontent.com/xscriptor-colors/terminal/main/assets/fonts/HackNerdFont/HackNerdFont-Regular.ttf" || warn "font download failed"
-    run_home fc-cache -f >/dev/null 2>&1 || true
+# --- fonts -----------------------------------------------------------------
+FONT="$HOME/.local/share/fonts/HackNerdFont-Regular.ttf"
+if [[ ! -f "$FONT" ]]; then
+    echo "== font"
+    mkdir -p "$HOME/.local/share/fonts"
+    wget -q -O "$FONT" \
+        "https://raw.githubusercontent.com/xscriptor-colors/terminal/main/assets/fonts/HackNerdFont/HackNerdFont-Regular.ttf" \
+        || warn "font download failed"
+    fc-cache -f >/dev/null 2>&1 || true
 fi
-run_privileged bash -c 'cp "$1" /usr/share/fonts/ 2>/dev/null; fc-cache -f >/dev/null 2>&1 || true' _ "$TARGET_HOME/.local/share/fonts/HackNerdFont-Regular.ttf" || true
+root bash -c "cp '$FONT' /usr/share/fonts/ 2>/dev/null; fc-cache -f >/dev/null 2>&1 || true" || true
 
-# --- SDDM -------------------------------------------------------------------
+# --- SDDM + PAM + services ------------------------------------------------
 echo "== sddm theme"
 if [[ -d "$SRC/config/sddm/themes/x" ]]; then
-    run_privileged mkdir -p /usr/share/sddm/themes/x
-    run_privileged cp -r "$SRC/config/sddm/themes/x/." /usr/share/sddm/themes/x/
-    run_privileged mkdir -p /etc/sddm.conf.d
-    printf '[Theme]\nCurrent=x\n' | run_privileged tee /etc/sddm.conf.d/10-x-theme.conf >/dev/null
+    root mkdir -p /usr/share/sddm/themes/x
+    root cp -r "$SRC/config/sddm/themes/x/." /usr/share/sddm/themes/x/
+    root mkdir -p /etc/sddm.conf.d
+    printf '[Theme]\nCurrent=x\n' | root tee /etc/sddm.conf.d/10-x-theme.conf >/dev/null
 fi
-
-# --- PAM (quickshell lock) ---------------------------------------------------
 if [[ -f "$SRC/config/pam.d/quickshell" ]]; then
-    run_privileged tee /etc/pam.d/quickshell < "$SRC/config/pam.d/quickshell" >/dev/null || true
+    root tee /etc/pam.d/quickshell < "$SRC/config/pam.d/quickshell" >/dev/null || true
 fi
-
-# --- services ----------------------------------------------------------------
 echo "== services"
-run_privileged systemctl enable NetworkManager.service 2>/dev/null || true
-run_privileged systemctl enable sddm.service 2>/dev/null || true
-run_privileged systemctl enable power-profiles-daemon.service 2>/dev/null || true
-run_privileged systemctl --global enable pipewire pipewire-pulse wireplumber 2>/dev/null || true
+root systemctl enable NetworkManager.service 2>/dev/null || true
+root systemctl enable sddm.service 2>/dev/null || true
+root systemctl enable power-profiles-daemon.service 2>/dev/null || true
+root systemctl --global enable pipewire pipewire-pulse wireplumber 2>/dev/null || true
 
-echo "hyprland setup complete (user $TARGET_USER). Reboot and select Hyprland in SDDM."
+echo "hyprland setup complete. Reboot and select Hyprland in SDDM."
