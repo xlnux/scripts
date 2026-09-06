@@ -100,8 +100,7 @@ fi
 OFFICIAL=(
     hyprland     hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     xdg-desktop-portal-wlr qt5-wayland qt6-wayland qt5ct qt6ct
-    polkit-kde-agent hyprpolkitagent swayosd quickshell xorg-xwayland sddm
-    rofi jq imagemagick librsvg
+    polkit-kde-agent hyprpolkitagent xorg-xwayland sddm rofi jq imagemagick librsvg
     kitty dunst grim slurp wl-clipboard cliphist brightnessctl pamixer
     playerctl hyprpicker libnotify iproute2 pciutils pavucontrol networkmanager
     pipewire pipewire-alsa pipewire-pulse wireplumber network-manager-applet
@@ -114,8 +113,13 @@ OFFICIAL=(
 )
 
 AUR=(
+    quickshell-git swayosd-git matugen-bin
     bibata-cursor-theme mpvpaper networkmanager-dmenu-git
 )
+
+# The config targets quickshell-git/swayosd-git; drop the official releases
+# first so the AUR versions can be installed without conflicts.
+root pacman -R --noconfirm quickshell swayosd 2>/dev/null || true
 
 echo "== official packages"
 root pacman -S --needed --noconfirm "${OFFICIAL[@]}" || warn "some official packages failed"
