@@ -197,11 +197,42 @@ root bash -c "cp '$FONT' /usr/share/fonts/ 2>/dev/null; fc-cache -f >/dev/null 2
 
 # --- SDDM + PAM + services ------------------------------------------------
 echo "== sddm theme"
-if [[ -d "$SDDM_SRC/themes/x" ]]; then
+if [[ -d "$SRC/config/sddm/themes/x" ]]; then
     root mkdir -p /usr/share/sddm/themes/x
-    root cp -r "$SDDM_SRC/themes/x/." /usr/share/sddm/themes/x/
+    root cp -r "$SRC/config/sddm/themes/x/." /usr/share/sddm/themes/x/
     root mkdir -p /etc/sddm.conf.d
     printf '[Theme]\nCurrent=x\n' | root tee /etc/sddm.conf.d/10-x-theme.conf >/dev/null
+
+    # Use the X system wallpaper as the login background.
+    if [[ -f /usr/share/backgrounds/x/x-wallpaper.jpg ]]; then
+        root cp /usr/share/backgrounds/x/x-wallpaper.jpg /usr/share/sddm/themes/x/wallpaper.jpg
+    fi
+
+    # The theme's QML needs Colors.qml (derived from the active palette).
+    # Generate it when possible, otherwise install a fallback so SDDM does not
+    # drop to the default theme.
+    if [[ -x "$HOME/.config/hypr/scripts/sddm-colors.sh" ]]; then
+        bash "$HOME/.config/hypr/scripts/sddm-colors.sh" >/dev/null 2>&1 || true
+    fi
+    if [[ -f "$HOME/.config/hypr/sddm-colors.qml" ]]; then
+        root cp "$HOME/.config/hypr/sddm-colors.qml" /usr/share/sddm/themes/x/Colors.qml
+    fi
+    if [[ ! -f /usr/share/sddm/themes/x/Colors.qml ]]; then
+        cat > /tmp/x-Colors.qml <<'EOF'
+pragma Singleton
+import QtQuick
+QtObject {
+    readonly property color base: "#1e1e2e"
+    readonly property color surface0: "#313244"
+    readonly property color text: "#cdd6f4"
+    readonly property color subtext0: "#a6adc8"
+    readonly property color mauve: "#f5c2e7"
+    readonly property color blue: "#89b4fa"
+    readonly property color red: "#f38ba8"
+}
+EOF
+        root cp /tmp/x-Colors.qml /usr/share/sddm/themes/x/Colors.qml
+    fi
 fi
 if [[ -f "$PAM_SRC" ]]; then
     root tee /etc/pam.d/quickshell < "$PAM_SRC" >/dev/null || true
