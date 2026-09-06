@@ -44,3 +44,12 @@ adding a file.
 
 `~/.local/state/x/` stores user state (applied migrations, active theme).
 `~/.config/x/` stores generated user config (e.g. `theme.conf`).
+
+## x setup --online
+
+Runs the original `xscriptor-colors/hyprland` installer (the upstream
+`./install.sh`) from a temporary clone, then cleans up. Use it when already
+logged in and the offline packaged setup is not enough. It asks for the sudo
+password when the upstream script needs it.
+
+    x setup --user --online
