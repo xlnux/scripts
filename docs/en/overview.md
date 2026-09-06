@@ -33,7 +33,6 @@ out of scope for packaging (see the packaging doc and the workspace ROADMAP).
 - `migrations/`, `themes/` — per-user migrations and palette themes.
 - `packaging/` — the `x-scripts` PKGBUILD and the offline config snapshot
   generator (`vendor-config.sh`).
-- `wsl/` — legacy WSL bootstrap (kept; planned to be unified with the payload).
 - `test/` — local tests without root (`test/smoke.sh`).
 
 ## Role in the system
@@ -68,3 +67,4 @@ the "distro installable" stage; remaining audit items for this repo include
 `x-base.packages` without a consumer, CLI polish, more unit coverage for the
 helpers/phases and WSL unification. Progress and decisions live in the
 `ROADMAP.md`/`DECISIONS.md` files at the workspace root (`x-lnux`).
+WSL lives in its dedicated repos: xlnux/wsl and xlnux/wsl-scripts.

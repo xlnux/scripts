@@ -11,7 +11,6 @@ installer). It lives alongside the distro in `xlnux/x` and the tooling in
 - `skel/` + `etc/` + `config/` — dotfile seeds: `/etc/skel`, `/etc`
   drop-ins and `~/.config` (includes the Hyprland placeholder).
 - `hardware/`, `tools/` — optional modules (NVIDIA, QEMU/libvirt, node).
-- `wsl/` — WSL bootstrap.
 - `test/` — local tests without root.
 
 Structure and mechanics details in `docs/LAYOUT.md`.
@@ -40,3 +39,4 @@ ROADMAP and DECISIONS at the workspace root `x-lnux`.
 - Documentation: https://github.com/xlnux/wiki
 
 `x setup --user --online` runs the original upstream Hyprland installer (clone in temp, run install.sh, cleanup).
+WSL lives in its dedicated repos: xlnux/wsl and xlnux/wsl-scripts.

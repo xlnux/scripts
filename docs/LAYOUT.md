@@ -25,7 +25,6 @@ see ADR-0001/ADR-0003 in `DECISIONS.md` at the workspace root).
 | `themes/` | Theme store: `themes/<name>/colors` (key=hex), applied by `x theme set`. |
 | `hardware/` | Self-contained modules: `nvidia.sh`, `qemu.sh`. |
 | `tools/` | Optional per-user toolchains/installers: `node.sh` (fnm), `hyprland-install.sh` (Hyprland config from external repo). |
-| `wsl/` | WSL bootstrap (kept; will be unified with the payload later). |
 | `test/` | Local tests without root. |
 
 ## Mechanics (ADR-0003)
@@ -42,3 +41,4 @@ see ADR-0001/ADR-0003 in `DECISIONS.md` at the workspace root).
   `bash install/system.sh`.
 - As user (finalize): `X_NODE=1 bash install/user.sh`.
 - Optional extras: `X_HW_NVIDIA=1 X_HW_QEMU=1` to force hardware modules.
+WSL lives in its dedicated repos: xlnux/wsl and xlnux/wsl-scripts.

@@ -28,7 +28,6 @@ ADR-0001/ADR-0003 en `DECISIONS.md` en la raíz del workspace).
 | `hardware/` | Módulos root autocontenidos: `nvidia.sh`, `qemu.sh`. |
 | `tools/` | Tools de nivel usuario: `node.sh` (fnm, controlado por `X_NODE`), `hyprland-install.sh` (despliegue offline de config Hyprland/kitty/nvim, controlado por `X_HYPRLAND`). |
 | `packaging/` | `PKGBUILD` de `x-scripts` + generador del snapshot offline `vendor-config.sh` + salida `.vendor/` (git-ignored). |
-| `wsl/` | Bootstrap WSL legacy (se mantiene; previsto unificarlo con el payload). |
 | `test/` | Tests locales sin root: `test/smoke.sh` (sintaxis + helpers + CLI + dry-runs de Hyprland). |
 | `docs/` | Esta documentación (`CLI.md`, `LAYOUT.md`, `en/`, `es/`). |
 
@@ -71,3 +70,4 @@ bash test/smoke.sh
 - `provisioning.md` — fases, helpers, idempotencia.
 - `hyprland.md` — el tool de setup de escritorio offline.
 - `packaging.md` — construir `x-scripts` y el snapshot vendido.
+WSL lives in its dedicated repos: xlnux/wsl and xlnux/wsl-scripts.

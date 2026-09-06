@@ -34,7 +34,6 @@ de packaging y el ROADMAP del workspace).
 - `migrations/`, `themes/` — migraciones por usuario y temas por paleta.
 - `packaging/` — el PKGBUILD de `x-scripts` y el generador del snapshot de
   config offline (`vendor-config.sh`).
-- `wsl/` — bootstrap WSL legacy (se mantiene; previsto unificarlo con el
   payload).
 - `test/` — tests locales sin root (`test/smoke.sh`).
 
@@ -68,6 +67,6 @@ existe un `x/reboot` local de referencia). El seguimiento de fases en el
 `ROADMAP.md` de este repo y del workspace está mayormente completo hasta la
 etapa "distro instalable"; restos de auditoría pendientes para este repo
 incluyen `x-base.packages` sin consumidor, pulido de CLI, más cobertura de
-tests para helpers/fases y la unificación de `wsl/`. El progreso y las
 decisiones viven en los `ROADMAP.md`/`DECISIONS.md` de la raíz del workspace
 (`x-lnux`).
+WSL lives in its dedicated repos: xlnux/wsl and xlnux/wsl-scripts.
