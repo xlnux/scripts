@@ -36,3 +36,7 @@ X_NODE=1 bash install/user.sh
 
 *reboot* initiative on the `x/reboot` branch. Phases and decisions in the
 ROADMAP and DECISIONS at the workspace root `x-lnux`.
+
+- Documentation: https://github.com/xlnux/wiki
+
+`x setup --user --online` runs the original upstream Hyprland installer (clone in temp, run install.sh, cleanup).
