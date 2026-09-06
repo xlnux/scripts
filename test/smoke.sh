@@ -59,20 +59,16 @@ check "second pass is idempotent (no extra backup)" \
     test "$(find "$DST" -name 'app.conf.bak.*' | wc -l)" = "$BAK_COUNT"
 
 echo "== tool hyprland-install =="
-# Fake local source: verifies .git/.github cleanup and the mode mapping.
+# Fake local source: verifies .git/.github cleanup and the dry-run plan.
 FAKE_HYPR="$TMP/fake-hypr"
-mkdir -p "$FAKE_HYPR/.git" "$FAKE_HYPR/.github" 
-touch "$FAKE_HYPR/install.sh"
+mkdir -p "$FAKE_HYPR/.git" "$FAKE_HYPR/.github" "$FAKE_HYPR/config/hypr"
+touch "$FAKE_HYPR/config/hypr/placeholder"
 
-X_HYPR_DRYRUN=1 X_HYPR_SOURCE="$FAKE_HYPR" X_HYPR_MODE=dotfiles \
+X_HYPR_DRYRUN=1 X_HYPR_SOURCE="$FAKE_HYPR" \
     bash "$SRC/tools/hyprland-install.sh" > "$TMP/hypr.out" 2>&1
 check "cleans .git from the copy" test ! -e "$FAKE_HYPR/.git"
 check "cleans .github from the copy" test ! -e "$FAKE_HYPR/.github"
-check "maps dotfiles mode" grep -q -- '--dotfiles-only' "$TMP/hypr.out"
-
-X_HYPR_DRYRUN=1 X_HYPR_SOURCE="$FAKE_HYPR" X_HYPR_MODE=full \
-    bash "$SRC/tools/hyprland-install.sh" > "$TMP/hypr2.out" 2>&1
-check "full mode without flags" grep -q 'install.sh  at' "$TMP/hypr2.out"
+check "prints dry-run plan" grep -q "dry-run: install deps" "$TMP/hypr.out"
 
 echo "== CLI =="
 chmod +x "$SRC"/bin/x "$SRC"/bin/*.sh
