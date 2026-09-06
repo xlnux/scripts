@@ -1,4 +1,5 @@
 src/
 pkg/
+.vendor/
 *.pkg.tar.zst
 *.tar.zst

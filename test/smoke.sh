@@ -70,6 +70,19 @@ check "does not destroy the caller source (.git kept)" test -d "$FAKE_HYPR/.git"
 check "does not destroy the caller source (.github kept)" test -d "$FAKE_HYPR/.github"
 check "prints dry-run plan" grep -q "dry-run: install deps" "$TMP/hypr.out"
 
+# Offline path: the packaged config tree (/usr/share/x/config) is preferred
+# over a runtime clone. A dry run against a fake packaged tree must use it.
+PKG_CFG="$TMP/pkgcfg"
+mkdir -p "$PKG_CFG/hypr" "$PKG_CFG/scripts" "$PKG_CFG/kitty" "$PKG_CFG/nvim"
+X_HYPR_DRYRUN=1 X_HYPR_CONFIG="$PKG_CFG" \
+    bash "$SRC/tools/hyprland-install.sh" > "$TMP/hypr-offline.out" 2>&1
+check "offline dry-run resolves the packaged config tree" \
+    grep -q "offline configs found in packaged tree" "$TMP/hypr-offline.out"
+check "offline dry-run deploys from the packaged tree" \
+    grep -q "$PKG_CFG (offline)" "$TMP/hypr-offline.out"
+check "tool defaults to /usr/share/x/config for offline configs" \
+    grep -q "/usr/share/x/config" "$SRC/tools/hyprland-install.sh"
+
 echo "== CLI =="
 chmod +x "$SRC"/bin/x "$SRC"/bin/*.sh
 

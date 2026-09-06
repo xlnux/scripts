@@ -1,7 +1,7 @@
 # Maintainer: Xscriptor <dev@xscriptor.com>
 pkgname=x-scripts
 pkgver=0.1.0
-pkgrel=7
+pkgrel=8
 pkgdesc="x provisioning payload and CLI (reboot)"
 arch=('any')
 url="https://github.com/xlnux/scripts"
@@ -17,6 +17,16 @@ package() {
     for d in bin install skel etc config hardware tools migrations themes; do
         [ -e "$startdir/../$d" ] && cp -a "$startdir/../$d" "$dest/"
     done
+
+    # Offline config snapshot (hypr/rofi/dunst/cava/hypridle/sddm/pam.d/scripts
+    # + kitty + nvim) produced by vendor-config.sh. When present it is merged
+    # into /usr/share/x/config so tools/hyprland-install.sh can deploy without
+    # cloning external repos. No remote source=() entries: the snapshot is
+    # vendored in-repo, not fetched at build time.
+    if [[ -d "$startdir/.vendor/x-config" ]]; then
+        install -d "$dest/config"
+        cp -a "$startdir/.vendor/x-config/." "$dest/config/"
+    fi
 
     find "$dest/bin" "$dest/install" "$dest/hardware" "$dest/tools" -type f \( -name '*.sh' -o -name 'x' \) -exec chmod +x {} +
 
