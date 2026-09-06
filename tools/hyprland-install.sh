@@ -11,9 +11,10 @@ set -euo pipefail
 # Runs as the TARGET USER (never as root): root operations go through sudo.
 #
 # Env:
-#   X_HYPR_NVIDIA     auto-configure NVIDIA when detected (default: 1)
+#   X_HYPR_NVIDIA     configure NVIDIA (default: 0; NVIDIA is handled by the
+#                     system hardware phase to avoid driver conflicts)
 #   X_HYPR_WALLPAPERS download the 1.37GB wallpaper pack (default: 0)
-#   X_HYPR_SOURCE     local copy override (for tests/dev)
+#   X_HYPR_SOURCE     local copy override (for tests/dev; a copy is made)
 #   X_HYPR_REF        branch/commit (default: main)
 #   X_HYPR_DRYRUN     1 = fetch/cleanup and print the plan only
 #   X_HYPR_KEEP_SRC   1 = keep the temp copy
@@ -35,6 +36,13 @@ mkdir -p "$CACHE"
 SRC="${X_HYPR_SOURCE:-}"
 COMMIT="local"
 
+if [[ -n "$SRC" ]]; then
+    # Never mutate the caller's source: work on a copy.
+    COPY="$(mktemp -d "$CACHE/hyprland-copy.XXXXXX")"
+    cp -a "$SRC/." "$COPY/"
+    SRC="$COPY"
+fi
+
 if [[ -z "$SRC" ]]; then
     SRC="$(mktemp -d "$CACHE/hyprland.XXXXXX")"
     [[ "${X_HYPR_KEEP_SRC:-0}" != "1" ]] && trap 'rm -rf "$SRC"' EXIT
@@ -53,9 +61,10 @@ fi
 
 # --- package split: official (repos) vs AUR -----------------------------------
 OFFICIAL=(
-    hyprland hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+    hyprland     hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     xdg-desktop-portal-wlr qt5-wayland qt6-wayland qt5ct qt6ct
-    polkit-kde-agent xorg-xwayland sddm rofi-wayland jq imagemagick librsvg
+    polkit-kde-agent hyprpolkitagent swayosd quickshell xorg-xwayland sddm
+    rofi-wayland jq imagemagick librsvg
     kitty dunst grim slurp wl-clipboard cliphist brightnessctl pamixer
     playerctl hyprpicker libnotify iproute2 pciutils pavucontrol networkmanager
     pipewire pipewire-alsa pipewire-pulse wireplumber network-manager-applet
@@ -68,8 +77,7 @@ OFFICIAL=(
 )
 
 AUR=(
-    adw-gtk3 bibata-cursor-theme mpvpaper quickshell-git swayosd-git
-    hyprpolkitagent networkmanager-dmenu-git
+    adw-gtk3 bibata-cursor-theme mpvpaper networkmanager-dmenu-git
 )
 
 echo "== official packages"
@@ -82,7 +90,8 @@ if (( ${#AUR[@]} )); then
 
     if [[ -z "$HELPER" ]]; then
         echo "== installing yay (as user)"
-        YAY_TMP="$(mktemp -d)"
+        root pacman -S --needed --noconfirm base-devel >/dev/null 2>&1 || true
+        YAY_TMP="$(mktemp -d "$CACHE/yay.XXXXXX")"
         git clone -q https://aur.archlinux.org/yay.git "$YAY_TMP/yay"
         (cd "$YAY_TMP/yay" && makepkg -si --noconfirm) || warn "yay build failed"
         rm -rf "$YAY_TMP"
@@ -100,7 +109,7 @@ if (( ${#AUR[@]} )); then
 fi
 
 # --- NVIDIA --------------------------------------------------------------
-if [[ "${X_HYPR_NVIDIA:-1}" == "1" ]] && has_cmd lspci && lspci | grep -qi nvidia; then
+if [[ "${X_HYPR_NVIDIA:-0}" == "1" ]] && has_cmd lspci && lspci | grep -qi nvidia; then
     echo "== nvidia detected"
     case "$(uname -r)" in
         *lts*) HEADERS="linux-lts-headers" ;;

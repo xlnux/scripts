@@ -5,6 +5,7 @@
 set -euo pipefail
 
 X_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+X_BIN="${X_BIN:-$X_ROOT/bin}"
 
 run_privileged() {
     if [[ "$(id -u)" -eq 0 ]]; then

@@ -66,8 +66,8 @@ touch "$FAKE_HYPR/config/hypr/placeholder"
 
 X_HYPR_DRYRUN=1 X_HYPR_SOURCE="$FAKE_HYPR" \
     bash "$SRC/tools/hyprland-install.sh" > "$TMP/hypr.out" 2>&1
-check "cleans .git from the copy" test ! -e "$FAKE_HYPR/.git"
-check "cleans .github from the copy" test ! -e "$FAKE_HYPR/.github"
+check "does not destroy the caller source (.git kept)" test -d "$FAKE_HYPR/.git"
+check "does not destroy the caller source (.github kept)" test -d "$FAKE_HYPR/.github"
 check "prints dry-run plan" grep -q "dry-run: install deps" "$TMP/hypr.out"
 
 echo "== CLI =="

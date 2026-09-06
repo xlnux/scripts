@@ -63,7 +63,7 @@ run_privileged systemctl enable --now virtlockd.socket
 # 3. USER PERMISSIONS
 # -------------------------------------------------------------------------
 
-CURRENT_USER=$(whoami)
+CURRENT_USER="${SUDO_USER:-$(whoami)}"
 log "Adding user '$CURRENT_USER' to libvirt groups..."
 
 # libvirt: Manage VMs
