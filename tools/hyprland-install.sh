@@ -33,6 +33,7 @@ log "hyprland setup for user $TARGET_USER ($TARGET_HOME)"
 
 # --- fetch source -----------------------------------------------------------
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/x"
+mkdir -p "$CACHE"
 SRC="${X_HYPR_SOURCE:-}"
 COMMIT="local"
 
