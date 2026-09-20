@@ -20,11 +20,11 @@ see ADR-0001/ADR-0003 in `DECISIONS.md` at the workspace root).
 | `install/x-base.packages` | Base package list readable by the builder (one per line). |
 | `skel/` | `/etc/skel` seed for new users. |
 | `etc/` | `/etc` drop-ins (sysctl.d, tmpfiles.d, ...). One dir per path. |
-| `config/` | User dotfiles synced to `~/.config` (with backup). `hypr/` points to the external repo `xscriptor-colors/hyprland` (ADR-0005), installed via `tools/hyprland-install.sh`. |
+| `config/` | User dotfiles synced to `~/.config` (with backup). `hypr/` is only a documentation entry point + default wallpaper; the desktop config ships offline in the package (`/usr/share/x/config/equisdots`, equisdots org) via `tools/hyprland-install.sh` (ADR-0005). |
 | `migrations/` | Per-user idempotent migrations (`<timestamp>-<name>.sh`), applied by `x migrate`. |
 | `themes/` | Theme store: `themes/<name>/colors` (key=hex), applied by `x theme set`. |
 | `hardware/` | Self-contained modules: `nvidia.sh`, `qemu.sh`. |
-| `tools/` | Optional per-user toolchains/installers: `node.sh` (fnm), `hyprland-install.sh` (Hyprland config from external repo). |
+| `tools/` | Optional per-user toolchains/installers: `node.sh` (fnm), `hyprland-install.sh` (equisdots desktop from the offline snapshot; online fallback via `equisdots/dots`). |
 | `test/` | Local tests without root. |
 
 ## Mechanics (ADR-0003)

@@ -25,7 +25,7 @@ if [[ "${X_NODE:-0}" == "1" ]]; then
 fi
 
 if [[ "${X_HYPRLAND:-1}" == "1" ]]; then
-    log "user: installing Hyprland config (external repo)"
+    log "user: installing the Hyprland/equisdots desktop"
     run_as_user bash "$X_ROOT/tools/hyprland-install.sh"
 fi
 

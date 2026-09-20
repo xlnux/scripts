@@ -1,27 +1,40 @@
-# x — Hyprland setup tool
+# x — Hyprland/equisdots setup tool
 
 `tools/hyprland-install.sh` is our own **non-interactive** desktop setup for x.
-It provisions the Hyprland stack and its configs for the **target user** (it
-refuses to run as root; root operations go through sudo). It is invoked by the
-user phase (`install/user.sh`, gated by `X_HYPRLAND`, default on) and can be
-run by hand.
+It provisions the equisdots desktop stack for the **target user** (it refuses
+to run as root; root operations go through sudo). It is invoked by the user
+phase (`install/user.sh`, gated by `X_HYPRLAND`, default on) and can be run by
+hand.
 
 Design goals (ADR-0005):
 
-- The desktop configs ship **offline** inside the `x-scripts` package and are
-  deployed without cloning anything at setup time on an installed system.
-- The external repos remain the source of truth and are used **read-only**,
-  never integrated or modified.
-- **NVIDIA is intentionally not handled here**: the drivers are configured by
-  the system hardware phase and no NVIDIA helper is part of the vendored
-  config (the envycontrol-based `gpu-mode.sh` is excluded upstream-side).
+- The desktop configs ship **offline** inside the `x-scripts` package
+  (equisdots snapshot) and are deployed without cloning anything at setup time
+  on an installed system.
+- The equisdots org is the source of truth and the official installer is
+  [`equisdots/dots`](https://github.com/equisdots/dots); its repos are used
+  **read-only**, never integrated or modified. The online fallback delegates
+  the payload placement to `dots install`.
+- **NVIDIA is owned by the X hardware phase** (`hardware/nvidia.sh`). The tool
+  never installs drivers by itself; only when an NVIDIA GPU is present and no
+  driver was installed does it fall back to the upstream equisdots NVIDIA
+  setup (`hyprland/install.sh --nvidia-only`), and when the driver already
+  exists it only completes the `envycontrol`/sudoers piece used by
+  `gpu-mode.sh`. The full `dots system` phase never runs here.
 
 ## Sources of truth (external, branch `main`)
 
 | Repo | Content vendored |
 |------|------------------|
-| `xscriptor-colors/hyprland` | `hypr`, `hypridle`, `rofi`, `dunst`, `cava`, `sddm`, `pam.d/quickshell` and `scripts` (helper scripts dropped into `~/.config/hypr/scripts`). |
-| `xscriptor-colors/terminal` | kitty only: `emulators/kitty/config` → `kitty.conf` plus `emulators/kitty/themes/`. |
+| `equisdots/hyprland` | Lua config (`hyprland.lua`, modules, `hypridle.conf`), `rofi`, `dunst`, `cava`, `pam.d/quickshell` and `scripts` (helpers dropped into `~/.config/hypr/scripts`). |
+| `equisdots/shell` | Quickshell UI (bar, popups, panels, lock) → `~/.config/hypr/scripts/quickshell`. |
+| `equisdots/palettes` | Palette JSON set + schema → `.../quickshell/dock/palettes`. |
+| `equisdots/theme-sync` | Cross-app theming engine (`~/.local/bin/theme-sync`). |
+| `equisdots/davincix` | Wallpaper engine kernel (`~/.local/bin/davincix`). |
+| `equisdots/timex` | Time/weather engine + UI (`~/.local/bin/timex`, `.../quickshell/ui/timex`). |
+| `equisdots/login` | Static minimal SDDM greeter (one-time system install). |
+| `equisdots/dots` | Meta installer/updater + standalone `install-xwww.sh`. |
+| `xscriptor-colors/terminal` | kitty (`emulators/kitty`) and starship (`prompts/starship`). |
 | `xscriptor-colors/nvim` | the whole nvim config tree. |
 
 The vendored snapshot lives at `/usr/share/x/config` on an installed system
@@ -31,56 +44,89 @@ it is not the desktop config itself.
 
 ## How the tool works
 
-1. **Resolve the source.**
-   - Offline (default on an installed system): uses the packaged tree at
-     `/usr/share/x/config`; nothing is cloned.
-   - Override: `X_HYPR_SOURCE=<local hyprland checkout>` makes a copy first
-     (the caller's tree is never mutated) and strips `.git`/`.github` from the
-     copy. Intended for tests and development.
-   - Fallback: if neither is present (e.g. a dev checkout) it clones
-     `xscriptor-colors/hyprland` (`--depth 1`, branch `X_HYPR_REF`) into a
-     temp dir, strips `.git`/`.github` and records the commit. In this mode
-     kitty/nvim come only from the packaged tree (they are not cloned).
+1. **Resolve the payload.**
+   - Offline (default on an installed system): uses the equisdots snapshot at
+     `/usr/share/x/config/equisdots`; nothing is cloned.
+   - Override: `X_HYPR_SOURCE=<snapshot root>` (tests/dev; the caller's tree is
+     never mutated).
+   - Fallback (snapshot absent, e.g. a dev checkout): clones
+     `equisdots/dots` (`--depth 1`, branch `X_HYPR_REF`) and runs
+     `dots install`, the official placement. `X_HYPR_OFFLINE=1` forbids the
+     clone.
 2. **Packages.** Drops official `quickshell`/`swayosd` first (the config
    targets the `-git` versions), then installs an official list (Hyprland
-   stack, xdg portals, qt5/qt6 wayland, sddm, rofi, kitty, dunst, pipewire,
-   network, fonts, ...) with `pacman -S --needed`, and AUR packages
-   (`quickshell-git`, `swayosd-git`, `matugen-bin`, ...) via an existing
-   `yay`/`paru`, bootstrapping `yay` if none is found. Failures are warned, not
-   fatal.
-3. **Deploy configs** to `~/.config`: `hypr` (removing any legacy flat
-   `.conf` files), `rofi`, `dunst`, `cava`, `hypridle`, `scripts`
-   (made executable), plus `kitty` and `nvim` when the offline tree provides
-   them. Creates `~/Pictures/Screenshots`, `~/Pictures/Wallpapers` and writes
-   `~/.local/state/xshell-version`.
-4. **Font.** Installs Hack Nerd Font for the user (downloaded) and copies it to
+   stack, xdg portals, qt5/qt6 wayland, sddm, rofi + rofi-emoji, kitty,
+   starship, dunst, satty, gpu-screen-recorder, pipewire, network, fonts,
+   ...) with `pacman -S --needed`, and AUR packages (`quickshell-git`,
+   `swayosd-git`, `bibata-cursor-theme`, `mpvpaper`,
+   `networkmanager-dmenu-git`) via an existing `yay`/`paru`, bootstrapping
+   `yay` if none is found. Failures are warned, not fatal.
+3. **User payload.**
+   - Offline: stages the snapshot into `~/.local/share/equisdots` and mirrors
+     `dots install` exactly: hyprland config → `~/.config/hypr`, rofi/dunst/
+     cava → `~/.config`, scripts → `~/.config/hypr/scripts` (legacy
+     pre-equisdots artifacts purged), shell → `.../quickshell`, palettes →
+     `.../quickshell/dock/palettes`, `~/.local/bin` wrappers
+     (`dots`, `theme-sync`, `davincix`, `timex`), timex UI, `settings.json`
+     seeding/migration with `jq`, and the monthly dotfiles timer.
+   - Online: `dots install` does that placement.
+4. **App configs (offline).** kitty, starship (`~/.config/equisdots/starship`)
+   and nvim from the snapshot, then the `theme-sync` engine regenerates the
+   palette artifacts (kitty/starship/nvim/rofi/cava/qt/gtk/...).
+5. **xwww.** Installs the wallpaper daemon (davincix needs it) with the
+   equisdots standalone installer (checksum-verified release, source
+   fallback) when `xwww-daemon` is missing.
+6. **Font.** Installs Hack Nerd Font for the user (downloaded) and copies it to
    `/usr/share/fonts`.
-5. **SDDM + PAM + services.** Installs the SDDM theme `x` (from the config),
-   points `/etc/sddm.conf.d/10-x-theme.conf` at it, uses the x wallpaper when
-   present, generates/installs the palette-derived `Colors.qml` (with a
-   fallback so SDDM never drops to the default theme), installs the PAM policy
-   for `quickshell`, and enables NetworkManager, SDDM,
-   power-profiles-daemon and the user pipewire services.
-6. Prints completion and asks for a reboot into SDDM → Hyprland.
+7. **Login + PAM + services.** Installs the static SDDM theme
+   (`equisdots/login`), writes `/etc/pam.d/quickshell`, and enables
+   NetworkManager, SDDM, power-profiles-daemon, swayosd-libinput-backend,
+   bluetooth and the user pipewire services.
+8. **NVIDIA.** If a GPU is present and no driver is installed, runs the
+   upstream `hyprland/install.sh --nvidia-only -y`. If the driver is already
+   there, it only completes the equisdots GPU-mode feature: installs
+   `envycontrol` (AUR, when missing) with the passwordless
+   `/etc/sudoers.d/99-gpu-mode` rule used by `gpu-mode.sh`.
+9. Writes `~/.local/state/equisdots-version`, ensures `~/.local/bin` is in the
+   shell PATH and prints the completion message.
+
+## User-level commands and recovery
+
+`dots`, `theme-sync`, `davincix` and `timex` are wrapper scripts in
+`~/.local/bin` that point at the repos under `~/.local/share/equisdots`. The
+tool adds that directory to the PATH of every existing shell rc (and creates
+`~/.profile` when none exists); `skel/.bashrc` already exports it, so TTY
+logins (through `~/.bash_profile`) can always reach them. Every deploy step is
+best-effort, so the wrappers are written even if a later step fails.
+
+If the desktop does not start, the stack can be repaired from a TTY:
+
+```bash
+x setup --user     # re-deploy the configs/payload (offline snapshot)
+dots install       # clone/update the payload
+dots doctor        # check dependencies, clones and installed paths
+```
 
 ## Flags / environment
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
 | `X_HYPR_CONFIG` | `/usr/share/x/config` | Packaged (offline) config tree. |
-| `X_HYPR_SOURCE` | — | Local hyprland checkout override; a copy is made and cleaned. |
-| `X_HYPR_REF` | `main` | Branch/commit of the runtime-clone fallback. |
+| `X_HYPR_SOURCE` | — | Snapshot root override (`$X_HYPR_SOURCE/equisdots`); read-only. |
+| `X_HYPR_REF` | `main` | Branch/commit of the `equisdots/dots` fallback clone. |
+| `X_HYPR_BASE` | `~/.local/share/equisdots` | Repo clones/wrappers target. |
 | `X_HYPR_DRYRUN` | `0` | `1` = resolve the source and print the plan only (no install). |
-| `X_HYPR_KEEP_SRC` | `0` | `1` = keep the temporary copy instead of deleting it. |
+| `X_HYPR_OFFLINE` | `0` | `1` = force offline; fail instead of cloning. |
+| `X_HYPR_KEEP_SRC` | `0` | `1` = keep the temporary `equisdots/dots` clone. |
 
 ```bash
-# plan only, from a fake/local checkout (no changes)
-X_HYPR_DRYRUN=1 X_HYPR_SOURCE=/path/to/hyprland bash tools/hyprland-install.sh
+# plan only, from a snapshot (no changes)
+X_HYPR_DRYRUN=1 X_HYPR_SOURCE=/path/to/x-config bash tools/hyprland-install.sh
 # plan only, offline tree
 X_HYPR_DRYRUN=1 X_HYPR_CONFIG=/usr/share/x/config bash tools/hyprland-install.sh
 # full setup for the current user
 bash tools/hyprland-install.sh
 ```
 
-Always run as the target user; `X_HYPR_DRYRUN` and the source-override paths
+Always run as the target user; `X_HYPR_DRYRUN` and the snapshot-override paths
 are exercised by `test/smoke.sh` without root.

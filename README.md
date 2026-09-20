@@ -38,5 +38,5 @@ ROADMAP and DECISIONS at the workspace root `x-lnux`.
 
 - Documentation: https://github.com/xlnux/wiki
 
-`x setup --user --online` runs the original upstream Hyprland installer (clone in temp, run install.sh, cleanup).
+`x setup --user --online` runs the original equisdots installer (clone of equisdots/dots in temp, run `dots setup`, cleanup).
 WSL lives in its dedicated repos: xlnux/wsl and xlnux/wsl-scripts.

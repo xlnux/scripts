@@ -12,7 +12,8 @@ Each theme is a directory `themes/<name>/` with a `colors` palette
 
 ## Consumers
 
-The real Hyprland config (external repo) manages its own palettes
-(`dock/palettes`) and is installed separately. This store is the palette of
-the x system itself; consumers (shell, terminals, etc.) read from
+The equisdots desktop stack owns its own palettes
+(`equisdots/palettes` → `~/.config/hypr/scripts/quickshell/dock/palettes`) and
+is installed separately by `tools/hyprland-install.sh`. This store is the
+palette of the x system itself; consumers (shell, terminals, etc.) read from
 `~/.config/x/theme.conf`.

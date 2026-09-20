@@ -129,9 +129,9 @@ redirijan cada ruta de estado/salida fuera del home real (ver `test/smoke.sh`).
 
 ## x setup --online
 
-Ejecuta el instalador original de `xscriptor-colors/hyprland` (su
-`./install.sh`) desde un clon temporal y lo limpia después. Úsalo cuando ya
-hayas iniciado sesión y el setup empaquetado offline no baste. Pedirá la
-contraseña de sudo cuando el script original la necesite.
+Ejecuta el instalador original de equisdots (`equisdots/dots setup`) desde un
+clon temporal y lo limpia después. Úsalo cuando ya hayas iniciado sesión y el
+setup empaquetado offline no baste. Pedirá la contraseña de sudo cuando el
+script original la necesite.
 
     x setup --user --online

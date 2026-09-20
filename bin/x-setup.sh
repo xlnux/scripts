@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# x:summary=Provision the system (root) or the user (--user); --online runs the upstream Hyprland installer
+# x:summary=Provision the system (root) or the user (--user); --online runs the upstream equisdots installer
 # x:args=[--user] [--online]
 # x:root=false
 set -euo pipefail
@@ -16,7 +16,7 @@ for arg in "$@"; do
         -h|--help)
             echo "usage: x setup [--user] [--online]"
             echo "  --user    provision the current user"
-            echo "  --online  also run the upstream xscriptor-colors/hyprland install.sh (interactive, asks for sudo)"
+            echo "  --online  also run the upstream equisdots/dots installer (interactive, asks for sudo)"
             exit 0
             ;;
         *)
