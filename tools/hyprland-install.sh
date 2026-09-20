@@ -1,28 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Non-interactive Hyprland setup for X Linux.
+# Non-interactive Hyprland/equisdots desktop setup for X Linux.
 #
-# The Hyprland/kitty/nvim configs ship OFFLINE inside the x-scripts package as
-# a vendored snapshot at /usr/share/x/config (regenerated with
-# packaging/vendor-config.sh). When that local tree exists it is used directly
-# and NO external repo is cloned at setup time.
+# The desktop stack moved to the equisdots org (hyprland, shell, palettes,
+# theme-sync, davincix, timex, login) and its official installer is
+# equisdots/dots. This tool is the X-specific non-interactive orchestrator:
 #
-# The external repos (xscriptor-colors/hyprland, xscriptor-colors/terminal,
-# xscriptor-colors/nvim, branch main) remain the source of truth and are used
-# READ-ONLY. A runtime clone is kept only as a fallback when the local tree is
-# absent (e.g. a dev checkout). NVIDIA is intentionally NOT configured here: it
-# is handled by the system hardware phase to avoid driver conflicts, and no
-# NVIDIA script is part of the vendored config.
+#   OFFLINE (default on an installed system): the whole equisdots snapshot
+#     ships inside x-scripts at $X_HYPR_CONFIG/equisdots (regenerated with
+#     packaging/vendor-config.sh) and is placed exactly like `dots install`
+#     does (configs, shell, palettes, engines, wrappers, login theme, PAM).
+#   ONLINE fallback (dev checkout / snapshot absent): clones equisdots/dots to
+#     the cache and runs `dots install` (the official placement).
+#
+# NVIDIA is owned by the X hardware phase (hardware/nvidia.sh). This tool only
+# falls back to the upstream equisdots NVIDIA setup (hyprland/install.sh
+# --nvidia-only) when an NVIDIA GPU is present and no driver is installed, so
+# the full `dots system` phase (and its nvidia-dkms choice) never runs here.
+# Nothing in the equisdots org is modified: repos are used read-only.
 #
 # Runs as the TARGET USER (never as root): root operations go through sudo.
 #
 # Env:
 #   X_HYPR_CONFIG     packaged config tree (default: /usr/share/x/config)
-#   X_HYPR_SOURCE     local copy override (for tests/dev; a copy is made)
-#   X_HYPR_REF        branch/commit of the runtime-clone fallback (default: main)
+#   X_HYPR_SOURCE     snapshot root override (tests/dev; $X_HYPR_SOURCE/equisdots)
+#   X_HYPR_REF        branch/commit of the equisdots/dots fallback (default: main)
+#   X_HYPR_BASE       equisdots data dir (default: ~/.local/share/equisdots)
 #   X_HYPR_DRYRUN     1 = resolve the source and print the plan only
-#   X_HYPR_KEEP_SRC   1 = keep the temp copy
+#   X_HYPR_OFFLINE    1 = force offline mode (never clone; error if no snapshot)
+#   X_HYPR_KEEP_SRC   1 = keep the temporary equisdots/dots clone
 
 source "$(dirname "${BASH_SOURCE[0]}")/../install/helpers/common.sh"
 
@@ -32,93 +39,96 @@ fi
 
 X_HYPR_REF="${X_HYPR_REF:-main}"
 X_HYPR_CONFIG="${X_HYPR_CONFIG:-/usr/share/x/config}"
-UPSTREAM_URL="https://github.com/xscriptor-colors/hyprland.git"
+BASE="${X_HYPR_BASE:-${XDG_DATA_HOME:-$HOME/.local/share}/equisdots}"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/x"
+CONFIG_DIR="$HOME/.config"
+HYPR="$CONFIG_DIR/hypr"
+QS="$HYPR/scripts/quickshell"
+BIN="$HOME/.local/bin"
+UPSTREAM_URL="https://github.com/equisdots/dots.git"
 
 root() { sudo "$@"; }
 
-# --- resolve the config source (offline packaged tree first) ---------------
-CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/x"
 mkdir -p "$CACHE"
-SRC="${X_HYPR_SOURCE:-}"
-COMMIT="local"
+
+# --- resolve the payload source (offline snapshot first) -------------------
+PAYLOAD="${X_HYPR_SOURCE:-$X_HYPR_CONFIG}"
 MODE=""
 CFG=""
+SRC=""
+DOTS_BIN=""
 
-if [[ -n "$SRC" ]]; then
-    # Never mutate the caller's source: work on a copy.
-    COPY="$(mktemp -d "$CACHE/hyprland-copy.XXXXXX")"
-    cp -a "$SRC/." "$COPY/"
-    SRC="$COPY"
-    rm -rf "$SRC/.git" "$SRC/.github"
-    MODE="repo"
-    log "source (override copy): $SRC"
-elif [[ -d "$X_HYPR_CONFIG" ]]; then
-    CFG="$X_HYPR_CONFIG"
+if [[ -d "$PAYLOAD/equisdots/hyprland" ]]; then
+    CFG="$PAYLOAD"
     MODE="offline"
-    log "offline configs found in packaged tree: $X_HYPR_CONFIG"
+    log "offline payload found in packaged tree: $CFG/equisdots"
+elif [[ "${X_HYPR_OFFLINE:-0}" == "1" ]]; then
+    error "offline mode requested but no equisdots snapshot at $PAYLOAD/equisdots"
 else
-    SRC="$(mktemp -d "$CACHE/hyprland.XXXXXX")"
+    MODE="online"
+    SRC="$(mktemp -d "$CACHE/equisdots-dots.XXXXXX")"
     [[ "${X_HYPR_KEEP_SRC:-0}" != "1" ]] && trap 'rm -rf "$SRC"' EXIT
     log "cloning $UPSTREAM_URL (branch $X_HYPR_REF)"
-    git clone -q --depth 1 --branch "$X_HYPR_REF" "$UPSTREAM_URL" "$SRC"
-    COMMIT="$(git -C "$SRC" rev-parse --short HEAD)"
-    rm -rf "$SRC/.git" "$SRC/.github"
-    MODE="repo"
-    log "source ready: $SRC (commit $COMMIT)"
+    git clone -q --depth 1 --branch "$X_HYPR_REF" "$UPSTREAM_URL" "$SRC/dots"
+    DOTS_BIN="$SRC/dots/dots"
 fi
 
-# Per-mode source paths. The vendored tree mirrors the hyprland layout one
-# level up: config/hypr -> hypr, config/<rel> -> <rel>, scripts -> scripts.
+# Payload paths per mode. The offline tree mirrors the ~/.local/share/equisdots
+# layout of `dots install` (equisdots/<repo>).
 if [[ "$MODE" == "offline" ]]; then
-    HYPR_SRC="$CFG/hypr"
-    REL_SRC="$CFG"
-    SCRIPTS_SRC="$CFG/scripts"
-    SDDM_SRC="$CFG/sddm"
-    PAM_SRC="$CFG/pam.d/quickshell"
+    HYPR_SRC="$CFG/equisdots/hyprland"
+    LOGIN_SRC="$CFG/equisdots/login"
+    XWWW_SRC="$CFG/equisdots/dots/scripts/install-xwww.sh"
     KITTY_SRC="$CFG/kitty"
+    STARSHIP_SRC="$CFG/starship"
     NVIM_SRC="$CFG/nvim"
 else
-    HYPR_SRC="$SRC/config/hypr"
-    REL_SRC="$SRC/config"
-    SCRIPTS_SRC="$SRC/scripts"
-    SDDM_SRC="$SRC/config/sddm"
-    PAM_SRC="$SRC/config/pam.d/quickshell"
+    HYPR_SRC="$BASE/hyprland"
+    LOGIN_SRC="$BASE/login"
+    XWWW_SRC="$BASE/dots/scripts/install-xwww.sh"
     KITTY_SRC=""
+    STARSHIP_SRC=""
     NVIM_SRC=""
 fi
 
 if [[ "${X_HYPR_DRYRUN:-0}" == "1" ]]; then
     if [[ "$MODE" == "offline" ]]; then
-        log "dry-run: install deps + deploy configs from packaged tree $X_HYPR_CONFIG (offline) + sddm + services"
+        log "dry-run: install deps + deploy the equisdots snapshot from $CFG (offline) + login/PAM/services"
     else
-        log "dry-run: install deps + deploy configs + sddm + services"
+        log "dry-run: clone equisdots/dots + install deps + deploy the payload + login/PAM/services"
     fi
     exit 0
 fi
 
-# --- package split: official (repos) vs AUR -----------------------------------
+# --- package split: official (repos) vs AUR ---------------------------------
 OFFICIAL=(
-    hyprland     hypridle xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
-    xdg-desktop-portal-wlr qt5-wayland qt6-wayland qt5ct qt6ct
-    polkit-kde-agent hyprpolkitagent xorg-xwayland sddm rofi jq imagemagick librsvg
-    kitty dunst grim slurp wl-clipboard cliphist brightnessctl pamixer
-    playerctl hyprpicker libnotify iproute2 pciutils pavucontrol networkmanager
-    pipewire pipewire-alsa pipewire-pulse wireplumber network-manager-applet
-    blueman bluez bluez-utils xdg-utils xdg-user-dirs wget curl gnome-keyring
-    seahorse libsecret noto-fonts noto-fonts-emoji papirus-icon-theme nautilus
-    gvfs gvfs-mtp cava zbar fd ripgrep socat inotify-tools acpi iw lm_sensors
-    bc python python-websockets qt6-websockets ffmpeg fastfetch wmctrl
-    power-profiles-daemon lsp-plugins qt5-quickcontrols qt5-quickcontrols2
+    hyprland hypridle hyprpolkitagent xdg-desktop-portal-hyprland
+    xdg-desktop-portal-gtk xdg-desktop-portal-wlr qt5-wayland qt6-wayland
+    qt5ct qt6ct polkit-kde-agent xorg-xwayland
+    rofi rofi-emoji jq imagemagick librsvg
+    kitty starship
+    dunst grim slurp wl-clipboard cliphist brightnessctl ddcutil pamixer
+    playerctl hyprpicker libnotify iproute2 pciutils rust pavucontrol
+    networkmanager sddm pipewire pipewire-alsa pipewire-pulse wireplumber
+    network-manager-applet blueman bluez bluez-utils xdg-utils xdg-user-dirs
+    wget curl rsync git base-devel gnome-keyring seahorse kwallet5 libsecret
+    noto-fonts noto-fonts-emoji adw-gtk-theme papirus-icon-theme
+    nautilus gvfs gvfs-mtp cava zbar fd ripgrep socat inotify-tools acpi iw
+    lm_sensors bc python python-websockets qt6-websockets ffmpeg fastfetch
+    satty yq wmctrl power-profiles-daemon easyeffects lsp-plugins
+    gpu-screen-recorder qt5-quickcontrols qt5-quickcontrols2
     qt5-graphicaleffects unzip
 )
 
 AUR=(
-    quickshell-git swayosd-git matugen-bin
-    bibata-cursor-theme mpvpaper networkmanager-dmenu-git
+    quickshell-git swayosd-git bibata-cursor-theme mpvpaper
+    networkmanager-dmenu-git
 )
 
 # The config targets quickshell-git/swayosd-git; drop the official releases
-# first so the AUR versions can be installed without conflicts.
+# first so the AUR versions can be installed without conflicts. (The upstream
+# list also names rofi-wayland, which no longer exists: the official rofi 2.x
+# is Wayland-capable and is what this tool installs.)
 root pacman -R --noconfirm quickshell swayosd 2>/dev/null || true
 
 echo "== official packages"
@@ -149,43 +159,177 @@ if (( ${#AUR[@]} )); then
     fi
 fi
 
-# --- deploy configs (user-owned) ------------------------------------------
-echo "== deploying configs to $HOME"
-CONFIG_DIR="$HOME/.config"
-mkdir -p "$CONFIG_DIR" "$HOME/Pictures/Screenshots" "$HOME/Pictures/Wallpapers"
-
-deploy_dir() { # src dst : copy the contents of src into dst
-    local src="$1" dst="$2"
+# --- user payload: mirror `dots install` (offline) or delegate to dots -----
+# Every deploy step is best-effort: a failure is warned and the run continues
+# so the user-level commands (~/.local/bin) always end up available.
+sync_tree() { # src dst [extra rsync args...] : src/. -> dst/ , no-op if src missing
+    local src="$1" dst="$2"; shift 2
     [[ -d "$src" ]] || return 0
-    mkdir -p "$dst"
-    cp -r "$src/." "$dst/"
+    mkdir -p "$dst" 2>/dev/null || true
+    if has_cmd rsync; then
+        rsync -a "$@" "$src/" "$dst/" || warn "sync failed: $src -> $dst"
+    else
+        cp -a "$src/." "$dst/" || warn "copy failed: $src -> $dst"
+    fi
+    return 0
 }
 
-if [[ -d "$HYPR_SRC" ]]; then
-    deploy_dir "$HYPR_SRC" "$CONFIG_DIR/hypr"
-    rm -f "$CONFIG_DIR"/hypr/hyprland.conf "$CONFIG_DIR"/hypr/colors.conf \
-        "$CONFIG_DIR"/hypr/animations.conf "$CONFIG_DIR"/hypr/autostart.conf \
-        "$CONFIG_DIR"/hypr/env.conf "$CONFIG_DIR"/hypr/keybinds.conf \
-        "$CONFIG_DIR"/hypr/theme.conf "$CONFIG_DIR"/hypr/windowrules.conf \
-        "$CONFIG_DIR"/hypr/workspaces.conf
+# Stage a vendored repo into BASE unless a managed (git) clone already exists.
+stage_repo() { # name
+    local name="$1"
+    local src="$CFG/equisdots/$name" dst="$BASE/$name"
+    [[ -d "$src" ]] || return 0
+    if [[ -d "$dst/.git" ]]; then
+        log "payload: keeping the managed clone of $name"
+        return 0
+    fi
+    sync_tree "$src" "$dst" --exclude '.git*' --exclude 'docs/'
+}
+
+# engine/meta wrappers in ~/.local/bin (same contract as `dots install`).
+# Written right after staging so the commands survive a later deploy failure.
+write_wrappers() {
+    mkdir -p "$BIN" 2>/dev/null || return 0
+    cat > "$BIN/theme-sync" <<WRAP
+#!/usr/bin/env bash
+# equisdots · theme-sync wrapper (engine lives in its own repo)
+exec "$BASE/theme-sync/theme-sync.sh" "\$@"
+WRAP
+    cat > "$BIN/davincix" <<WRAP
+#!/usr/bin/env bash
+# equisdots · davincix wrapper (kernel lives in its own repo)
+exec "$BASE/davincix/davincix.sh" "\$@"
+WRAP
+    cat > "$BIN/dots" <<WRAP
+#!/usr/bin/env bash
+# equisdots · dots wrapper (meta installer lives in its own repo)
+exec "$BASE/dots/dots" "\$@"
+WRAP
+    cat > "$BIN/timex" <<WRAP
+#!/usr/bin/env bash
+# equisdots · timex wrapper (engine lives in its own repo)
+exec "$BASE/timex/core/timex.sh" "\$@"
+WRAP
+    chmod +x "$BIN/theme-sync" "$BIN/davincix" "$BIN/dots" "$BIN/timex" 2>/dev/null || true
+}
+
+offline_payload() {
+    log "payload: staging the equisdots snapshot into $BASE"
+    mkdir -p "$BASE" 2>/dev/null || true
+    local r
+    for r in dots hyprland shell palettes theme-sync davincix timex login; do
+        stage_repo "$r"
+    done
+    write_wrappers
+    find "$BASE/timex" -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
+
+    # hyprland: config + app configs + scripts (mirrors dots sync_repo)
+    log "hyprland: config -> $HYPR"
+    sync_tree "$HYPR_SRC/config/hypr" "$HYPR" --exclude 'docs/' --exclude '.git*'
+    local c
+    for c in rofi dunst cava; do
+        sync_tree "$HYPR_SRC/config/$c" "$CONFIG_DIR/$c" --exclude '.git*'
+    done
+    mkdir -p "$HYPR/scripts" 2>/dev/null || true
+    sync_tree "$HYPR_SRC/scripts" "$HYPR/scripts" --exclude '.git*'
+    chmod +x "$HYPR/scripts"/*.sh 2>/dev/null || true
+
+    # Purge legacy artifacts from the pre-equisdots layout.
+    rm -rf "$HYPR/scripts/themesync"
+    rm -f "$HYPR/scripts/theme-sync.sh" "$HYPR/scripts/sddm-colors.sh" \
+          "$HYPR/sddm-colors.sh" "$HYPR/sddm-colors.qml"
+
+    # Monthly dotfiles check (systemd --user timer, user-level).
+    if [[ -x "$HYPR/scripts/dotfiles-update.sh" ]] && has_cmd systemctl; then
+        bash "$HYPR/scripts/dotfiles-update.sh" --install-timer >/dev/null 2>&1 || true
+    fi
+
+    # shell: Quickshell UI -> quickshell/ (palettes are a frozen contract and
+    # survive under dock/; rsync --delete purges stale shell files when present).
+    log "shell: quickshell -> $QS"
+    sync_tree "$BASE/shell" "$QS" --delete --exclude '.git*' --exclude 'docs/' --exclude 'dock/'
+    find "$QS" -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
+
+    # palettes -> quickshell/dock/palettes (the old index.json is regenerated
+    # from the palettes repo, which is now the owner of the ordered list).
+    log "palettes -> $QS/dock/palettes"
+    mkdir -p "$QS/dock/palettes" 2>/dev/null || true
+    rm -f "$QS/dock/palettes/index.json"
+    cp -f "$BASE/palettes"/*.json "$QS/dock/palettes/" 2>/dev/null || true
+    sync_tree "$BASE/timex/ui" "$QS/ui/timex" --delete --exclude '.git*' --exclude 'docs/'
+
+    # settings.json is ALWAYS default_settings.json + the user's values.
+    if [[ ! -f "$HYPR/settings.json" && -f "$HYPR/default_settings.json" ]]; then
+        cp "$HYPR/default_settings.json" "$HYPR/settings.json" 2>/dev/null || true
+        log "settings.json seeded from default_settings.json"
+    fi
+    if [[ -f "$HYPR/settings.json" && -f "$HYPR/default_settings.json" ]] \
+       && has_cmd jq; then
+        local tmp
+        tmp="$(mktemp)"
+        if jq --slurpfile def "$HYPR/default_settings.json" '
+            (if (has("dock") and (has("bar") | not)) then .bar = .dock else . end)
+            | del(.dock, .serpbar, .openGuideAtStartup, .topbarHelpIcon, .monitors)
+            | $def[0] * .
+        ' "$HYPR/settings.json" > "$tmp" 2>/dev/null; then
+            mv "$tmp" "$HYPR/settings.json"
+        else
+            rm -f "$tmp"
+            warn "settings.json could not be migrated (left untouched)"
+        fi
+    fi
+}
+
+if [[ "$MODE" == "offline" ]]; then
+    offline_payload
+else
+    log "payload: running the official installer (equisdots/dots install)"
+    bash "$DOTS_BIN" install || warn "dots install finished with warnings"
 fi
-for rel in rofi dunst cava hypridle; do
-    deploy_dir "$REL_SRC/$rel" "$CONFIG_DIR/$rel"
-done
-if [[ -d "$SCRIPTS_SRC" ]]; then
-    deploy_dir "$SCRIPTS_SRC" "$CONFIG_DIR/hypr/scripts"
-    find "$CONFIG_DIR/hypr/scripts" -type f -name '*.sh' -exec chmod +x {} \; 2>/dev/null || true
+
+# --- xwww wallpaper daemon (davincix needs it) ------------------------------
+# The standalone installer lives in equisdots/dots; it downloads the
+# checksum-verified release (source build as fallback) into /usr/local/bin.
+if ! has_cmd xwww-daemon; then
+    if [[ -x "$XWWW_SRC" ]]; then
+        echo "== xwww (wallpaper daemon)"
+        bash "$XWWW_SRC" || warn "xwww installation failed (wallpaper daemon)"
+    else
+        warn "xwww installer not found; install it later with: dots system"
+    fi
 fi
+
+# --- app configs from the snapshot (kitty/starship/nvim) --------------------
 if [[ -n "$KITTY_SRC" && -d "$KITTY_SRC" ]]; then
     echo "== kitty config (offline)"
-    deploy_dir "$KITTY_SRC" "$CONFIG_DIR/kitty"
+    sync_tree "$KITTY_SRC" "$CONFIG_DIR/kitty" --exclude '.git*'
+fi
+if [[ -n "$STARSHIP_SRC" && -d "$STARSHIP_SRC" ]]; then
+    echo "== starship config (offline)"
+    # Canonical root expected by theme-sync (~/.config/equisdots/starship).
+    sync_tree "$STARSHIP_SRC" "$CONFIG_DIR/equisdots/starship" --exclude '.git*'
 fi
 if [[ -n "$NVIM_SRC" && -d "$NVIM_SRC" ]]; then
     echo "== nvim config (offline)"
-    deploy_dir "$NVIM_SRC" "$CONFIG_DIR/nvim"
+    sync_tree "$NVIM_SRC" "$CONFIG_DIR/nvim" --exclude '.git*' --exclude '.github/'
 fi
+
+# Palette artifacts for the freshly deployed app configs (offline snapshot).
+if [[ "$MODE" == "offline" && -x "$BASE/theme-sync/theme-sync.sh" ]] \
+   && has_cmd python3 && has_cmd jq; then
+    echo "== theme-sync (palette artifacts)"
+    bash "$BASE/theme-sync/theme-sync.sh" || warn "theme-sync finished with warnings"
+fi
+
+mkdir -p "$HOME/Pictures/Screenshots" "$HOME/Pictures/Wallpapers" "$HYPR/wallpapers"
+
+# --- version state ----------------------------------------------------------
+if [[ -f "$HYPR_SRC/updates.json" ]] && has_cmd jq; then
+    V="$(jq -r '.version // empty' "$HYPR_SRC/updates.json" 2>/dev/null || true)"
+fi
+V="${V:-x-1}"
 mkdir -p "$HOME/.local/state"
-printf 'LOCAL_VERSION="x-1"\n' > "$HOME/.local/state/xshell-version"
+printf 'LOCAL_VERSION="%s"\n' "$V" > "$HOME/.local/state/equisdots-version"
 
 # --- fonts -----------------------------------------------------------------
 FONT="$HOME/.local/share/fonts/HackNerdFont-Regular.ttf"
@@ -199,52 +343,90 @@ if [[ ! -f "$FONT" ]]; then
 fi
 root bash -c "cp '$FONT' /usr/share/fonts/ 2>/dev/null; fc-cache -f >/dev/null 2>&1 || true" || true
 
-# --- SDDM + PAM + services ------------------------------------------------
-echo "== sddm theme"
-if [[ -d "$SRC/config/sddm/themes/x" ]]; then
-    root mkdir -p /usr/share/sddm/themes/x
-    root cp -r "$SRC/config/sddm/themes/x/." /usr/share/sddm/themes/x/
-    root mkdir -p /etc/sddm.conf.d
-    printf '[Theme]\nCurrent=x\n' | root tee /etc/sddm.conf.d/10-x-theme.conf >/dev/null
-
-    # Use the X system wallpaper as the login background.
-    if [[ -f /usr/share/backgrounds/x/x-wallpaper.jpg ]]; then
-        root cp /usr/share/backgrounds/x/x-wallpaper.jpg /usr/share/sddm/themes/x/wallpaper.jpg
-    fi
-
-    # The theme's QML needs Colors.qml (derived from the active palette).
-    # Generate it when possible, otherwise install a fallback so SDDM does not
-    # drop to the default theme.
-    if [[ -x "$HOME/.config/hypr/scripts/sddm-colors.sh" ]]; then
-        bash "$HOME/.config/hypr/scripts/sddm-colors.sh" >/dev/null 2>&1 || true
-    fi
-    if [[ -f "$HOME/.config/hypr/sddm-colors.qml" ]]; then
-        root cp "$HOME/.config/hypr/sddm-colors.qml" /usr/share/sddm/themes/x/Colors.qml
-    fi
-    if [[ ! -f /usr/share/sddm/themes/x/Colors.qml ]]; then
-        cat > /tmp/x-Colors.qml <<'EOF'
-pragma Singleton
-import QtQuick
-QtObject {
-    readonly property color base: "#1e1e2e"
-    readonly property color surface0: "#313244"
-    readonly property color text: "#cdd6f4"
-    readonly property color subtext0: "#a6adc8"
-    readonly property color mauve: "#f5c2e7"
-    readonly property color blue: "#89b4fa"
-    readonly property color red: "#f38ba8"
-}
-EOF
-        root cp /tmp/x-Colors.qml /usr/share/sddm/themes/x/Colors.qml
+# --- SDDM login theme (equisdots/login) -------------------------------------
+echo "== sddm login theme"
+if [[ -x "$LOGIN_SRC/install.sh" ]]; then
+    bash "$LOGIN_SRC/install.sh" || warn "login theme installation failed"
+elif [[ "$MODE" == "online" ]]; then
+    log "login repo not found; cloning equisdots/login..."
+    mkdir -p "$BASE"
+    if git clone -q --depth 1 https://github.com/equisdots/login "$BASE/login" 2>/dev/null; then
+        bash "$BASE/login/install.sh" || warn "login theme installation failed"
+    else
+        warn "could not clone equisdots/login; skipping the SDDM theme"
     fi
 fi
-if [[ -f "$PAM_SRC" ]]; then
+
+# --- PAM: quickshell lock screen --------------------------------------------
+echo "== PAM (quickshell lock)"
+PAM_SRC="$HYPR_SRC/config/pam.d/quickshell"
+if [[ -f /etc/pam.d/quickshell ]] && grep -q "system-auth" /etc/pam.d/quickshell 2>/dev/null; then
+    log "PAM service 'quickshell' already configured"
+elif [[ -f "$PAM_SRC" ]]; then
+    [[ -f /etc/pam.d/quickshell ]] && root cp /etc/pam.d/quickshell /etc/pam.d/quickshell.backup || true
     root tee /etc/pam.d/quickshell < "$PAM_SRC" >/dev/null || true
 fi
+
+# --- services ---------------------------------------------------------------
 echo "== services"
 root systemctl enable NetworkManager.service 2>/dev/null || true
 root systemctl enable sddm.service 2>/dev/null || true
 root systemctl enable power-profiles-daemon.service 2>/dev/null || true
+root systemctl enable swayosd-libinput-backend.service 2>/dev/null || true
+root systemctl enable bluetooth.service 2>/dev/null || true
 root systemctl --global enable pipewire pipewire-pulse wireplumber 2>/dev/null || true
+systemctl --user enable easyeffects.service 2>/dev/null || true
+
+# --- NVIDIA fallback --------------------------------------------------------
+# The X hardware phase owns the driver setup. Only when a GPU is present and
+# no driver got installed, delegate to the upstream equisdots NVIDIA setup
+# (read-only: it is the repo's own installer). When the driver is already
+# there, complete the equisdots GPU-mode feature (envycontrol + sudoers rule)
+# only if it is missing.
+if has_cmd lspci && lspci 2>/dev/null | grep -qiE 'vga.*nvidia|3d.*nvidia'; then
+    if ! root pacman -Qq nvidia nvidia-dkms nvidia-open nvidia-open-dkms >/dev/null 2>&1; then
+        warn "NVIDIA GPU without a driver: falling back to the equisdots NVIDIA setup"
+        bash "$HYPR_SRC/install.sh" --nvidia-only -y || warn "NVIDIA fallback failed; run: sudo bash $HYPR_SRC/install.sh --nvidia-only"
+    elif ! has_cmd envycontrol; then
+        GPU_HELPER=""
+        has_cmd yay && GPU_HELPER="yay"
+        has_cmd paru && GPU_HELPER="paru"
+        if [[ -n "$GPU_HELPER" ]]; then
+            log "NVIDIA: installing envycontrol (gpu-mode.sh)"
+            "$GPU_HELPER" -S --needed --noconfirm envycontrol || warn "envycontrol installation failed"
+            if has_cmd envycontrol; then
+                root tee /etc/sudoers.d/99-gpu-mode >/dev/null <<'EOF'
+%wheel ALL=(ALL) NOPASSWD: /usr/bin/envycontrol -s *
+EOF
+                root chmod 440 /etc/sudoers.d/99-gpu-mode || true
+            fi
+        else
+            warn "NVIDIA: envycontrol missing and no AUR helper; gpu-mode.sh will not switch modes"
+        fi
+    fi
+fi
+
+# --- ~/.local/bin on PATH ---------------------------------------------------
+# The dots/timex/davincix/theme-sync wrappers live in ~/.local/bin; make them
+# reachable from interactive shells and TTY logins even when the desktop did
+# not start (so the stack can be repaired with: dots install / x setup --user).
+ensure_local_bin_path() {
+    local line='export PATH="$HOME/.local/bin:$PATH"' rc added=0
+    for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile"; do
+        [[ -f "$rc" ]] || continue
+        if ! grep -q '\.local/bin' "$rc"; then
+            printf '\n# equisdots: local bin\n%s\n' "$line" >> "$rc"
+            log "PATH: ~/.local/bin added to $rc"
+            added=1
+        fi
+    done
+    if [[ "$added" -eq 0 && ! -f "$HOME/.profile" ]]; then
+        printf '# equisdots: local bin\n%s\n' "$line" > "$HOME/.profile"
+        log "PATH: created ~/.profile with ~/.local/bin"
+    fi
+}
+ensure_local_bin_path
 
 echo "hyprland setup complete. Reboot and select Hyprland in SDDM."
+log "user-level commands available: dots, theme-sync, davincix, timex (~/.local/bin)"
+log "recovery from a TTY: x setup --user (re-deploy) / dots install (payload update)"

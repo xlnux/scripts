@@ -1,5 +1,10 @@
 # x seed shell.
 
+# Local user binaries: dots/theme-sync/davincix/timex wrappers and x tooling.
+# Kept here so they are reachable from interactive shells and TTY logins even
+# when the desktop did not start.
+export PATH="$HOME/.local/bin:$PATH"
+
 # Aliases
 alias ..='cd ..'
 alias ...='cd ../..'

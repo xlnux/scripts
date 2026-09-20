@@ -28,8 +28,9 @@ Each phase requires root (`x_require_root`) and is safe to run by itself.
    - seeds the home from the skeleton (`x_seed_home`, only what is missing),
    - syncs `config/` into `~/.config` (`x_sync_config`, with backups).
 2. If `X_NODE=1`, installs the node toolchain (`tools/node.sh`, fnm).
-3. If `X_HYPRLAND` (default `1`), provisions the Hyprland desktop
-   (`tools/hyprland-install.sh`, offline from the packaged config snapshot).
+3. If `X_HYPRLAND` (default `1`), provisions the Hyprland/equisdots desktop
+   (`tools/hyprland-install.sh`, offline from the packaged equisdots snapshot;
+   online fallback via `equisdots/dots`).
 
 ```bash
 # as the target user (finalize)

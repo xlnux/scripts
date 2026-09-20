@@ -125,9 +125,9 @@ path away from the real home (see `test/smoke.sh`).
 
 ## x setup --online
 
-Runs the original `xscriptor-colors/hyprland` installer (the upstream
-`./install.sh`) from a temporary clone, then cleans up. Use it when already
-logged in and the offline packaged setup is not enough. It asks for the sudo
-password when the upstream script needs it.
+Runs the original equisdots installer (`equisdots/dots setup`) from a
+temporary clone, then cleans up. Use it when already logged in and the offline
+packaged setup is not enough. It asks for the sudo password when the upstream
+script needs it.
 
     x setup --user --online

@@ -59,29 +59,42 @@ check "second pass is idempotent (no extra backup)" \
     test "$(find "$DST" -name 'app.conf.bak.*' | wc -l)" = "$BAK_COUNT"
 
 echo "== tool hyprland-install =="
-# Fake local source: verifies .git/.github cleanup and the dry-run plan.
-FAKE_HYPR="$TMP/fake-hypr"
-mkdir -p "$FAKE_HYPR/.git" "$FAKE_HYPR/.github" "$FAKE_HYPR/config/hypr"
-touch "$FAKE_HYPR/config/hypr/placeholder"
+# Fake offline snapshot: the dry-run must resolve it, print the plan and never
+# mutate the caller's tree.
+FAKE_SNAP="$TMP/fake-snap"
+mkdir -p "$FAKE_SNAP/equisdots/hyprland/config/hypr" "$FAKE_SNAP/equisdots/shell" \
+         "$FAKE_SNAP/kitty" "$FAKE_SNAP/starship" "$FAKE_SNAP/nvim"
+touch "$FAKE_SNAP/equisdots/hyprland/config/hypr/hyprland.lua" \
+      "$FAKE_SNAP/equisdots/shell/Shell.qml"
 
-X_HYPR_DRYRUN=1 X_HYPR_SOURCE="$FAKE_HYPR" \
+X_HYPR_DRYRUN=1 X_HYPR_SOURCE="$FAKE_SNAP" \
     bash "$SRC/tools/hyprland-install.sh" > "$TMP/hypr.out" 2>&1
-check "does not destroy the caller source (.git kept)" test -d "$FAKE_HYPR/.git"
-check "does not destroy the caller source (.github kept)" test -d "$FAKE_HYPR/.github"
-check "prints dry-run plan" grep -q "dry-run: install deps" "$TMP/hypr.out"
+check "does not destroy the caller snapshot (hyprland.lua kept)" \
+    test -f "$FAKE_SNAP/equisdots/hyprland/config/hypr/hyprland.lua"
+check "offline dry-run resolves the snapshot" \
+    grep -q "offline payload found in packaged tree" "$TMP/hypr.out"
+check "prints dry-run plan" grep -q "dry-run: install deps + deploy the equisdots snapshot" "$TMP/hypr.out"
 
-# Offline path: the packaged config tree (/usr/share/x/config) is preferred
-# over a runtime clone. A dry run against a fake packaged tree must use it.
+# Offline forced without a snapshot must fail instead of cloning.
+if X_HYPR_DRYRUN=1 X_HYPR_OFFLINE=1 X_HYPR_CONFIG="$TMP/no-such-tree" \
+    bash "$SRC/tools/hyprland-install.sh" >/dev/null 2>&1; then
+    check "X_HYPR_OFFLINE without snapshot fails" false
+else
+    check "X_HYPR_OFFLINE without snapshot fails" true
+fi
+
 PKG_CFG="$TMP/pkgcfg"
-mkdir -p "$PKG_CFG/hypr" "$PKG_CFG/scripts" "$PKG_CFG/kitty" "$PKG_CFG/nvim"
+mkdir -p "$PKG_CFG/equisdots/hyprland" "$PKG_CFG/kitty" "$PKG_CFG/nvim"
 X_HYPR_DRYRUN=1 X_HYPR_CONFIG="$PKG_CFG" \
     bash "$SRC/tools/hyprland-install.sh" > "$TMP/hypr-offline.out" 2>&1
-check "offline dry-run resolves the packaged config tree" \
-    grep -q "offline configs found in packaged tree" "$TMP/hypr-offline.out"
+check "packaged tree dry-run resolves the equisdots snapshot" \
+    grep -q "offline payload found in packaged tree" "$TMP/hypr-offline.out"
 check "offline dry-run deploys from the packaged tree" \
     grep -q "$PKG_CFG (offline)" "$TMP/hypr-offline.out"
 check "tool defaults to /usr/share/x/config for offline configs" \
     grep -q "/usr/share/x/config" "$SRC/tools/hyprland-install.sh"
+check "tool delegates the online fallback to equisdots/dots" \
+    grep -q "github.com/equisdots/dots.git" "$SRC/tools/hyprland-install.sh"
 
 echo "== CLI =="
 chmod +x "$SRC"/bin/x "$SRC"/bin/*.sh

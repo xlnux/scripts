@@ -52,7 +52,7 @@ fi
 # 2. INSTALL NVIDIA PACKAGES
 # -------------------------------------------------------------------------
 
-PACKAGES="nvidia nvidia-utils nvidia-settings opencl-nvidia egl-wayland"
+PACKAGES="nvidia nvidia-utils nvidia-settings opencl-nvidia egl-wayland libva-nvidia-driver"
 
 if [ "$MULTILIB_ENABLED" = true ]; then
     PACKAGES="$PACKAGES lib32-nvidia-utils lib32-opencl-nvidia"

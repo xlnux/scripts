@@ -54,11 +54,14 @@ Ver `cli.md`, `provisioning.md`, `hyprland.md` y `packaging.md`.
 
 ## Fuentes de configuración
 
-Las configs de escritorio (Hyprland/kitty/nvim) **no** se mantienen en esta
-organización: viven en repos externos (`xscriptor-colors/hyprland`,
-`xscriptor-colors/terminal`, `xscriptor-colors/nvim`, rama `main`) que se usan
-de solo lectura. Un snapshot se vende dentro del paquete para uso offline. Ver
-`hyprland.md` y ADR-0005.
+Las configs de escritorio **no** se mantienen en esta organización: la org
+equisdots es dueña del stack (`equisdots/hyprland`, `equisdots/shell`,
+`equisdots/palettes`, `equisdots/theme-sync`, `equisdots/davincix`,
+`equisdots/timex`, `equisdots/login`, `equisdots/dots`, rama `main`) y las
+configs de apps vienen de `xscriptor-colors/terminal` (kitty/starship) y
+`xscriptor-colors/nvim`. Todas se usan de solo lectura; el instalador oficial
+es `equisdots/dots`. Un snapshot de todo el stack se vende dentro del paquete
+para uso offline. Ver `hyprland.md` y ADR-0005.
 
 ## Rama y estado
 

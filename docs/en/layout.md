@@ -22,11 +22,11 @@ ADR-0001/ADR-0003 in `DECISIONS.md` at the workspace root).
 | `install/x-base.packages` | Base package list readable by the builder (one per line); no consumer wired yet. |
 | `skel/` | `/etc/skel` seed for new users (currently a `.bashrc`). |
 | `etc/` | `/etc` drop-ins, one directory per path (`sysctl.d`, `tmpfiles.d`, `sudoers.d`, `pacman.d/hooks` documented in its README); no drop-ins shipped yet. |
-| `config/` | User dotfiles synced to `~/.config`. `config/hypr/` is only a documentation entry point + default wallpaper; the real desktop config ships offline in the package (`/usr/share/x/config`), ADR-0005. |
+| `config/` | User dotfiles synced to `~/.config`. `config/hypr/` is only a documentation entry point + default wallpaper; the real desktop config ships offline in the package (`/usr/share/x/config/equisdots`), ADR-0005. |
 | `migrations/` | Per-user idempotent migrations (`<timestamp>-<name>.sh`), applied by `x migrate` / `x update`. |
 | `themes/` | Theme store: `themes/<name>/colors` (key=hex), applied by `x theme set`. |
 | `hardware/` | Self-contained root modules: `nvidia.sh`, `qemu.sh`. |
-| `tools/` | User-level tools: `node.sh` (fnm, gated by `X_NODE`), `hyprland-install.sh` (offline Hyprland/kitty/nvim config deployment, gated by `X_HYPRLAND`). |
+| `tools/` | User-level tools: `node.sh` (fnm, gated by `X_NODE`), `hyprland-install.sh` (offline equisdots desktop deployment, gated by `X_HYPRLAND`). |
 | `packaging/` | `PKGBUILD` for `x-scripts` + `vendor-config.sh` offline snapshot generator + `.vendor/` output (git-ignored). |
 | `test/` | Local tests without root: `test/smoke.sh` (syntax + helpers + CLI + Hyprland dry-runs). |
 | `docs/` | This documentation (`CLI.md`, `LAYOUT.md`, `en/`, `es/`). |

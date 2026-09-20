@@ -1,31 +1,31 @@
-# x — packaging
+# x — empaquetado
 
 El payload de aprovisionamiento se empaqueta como **`x-scripts`** con un
-**PKGBUILD + makepkg** plano en `packaging/`. (El tooling Rust `xpkg`/`xpm`
-está fuera de alcance para el empaquetado por ahora; ver el ROADMAP del
+**PKGBUILD + makepkg** simple en `packaging/`. (El tooling Rust `xpkg`/`xpm`
+queda fuera del alcance de empaquetado por ahora; ver el ROADMAP del
 workspace, Fase 4.)
 
 ## Construir `x-scripts`
 
-`packaging/PKGBUILD` produce el paquete de Arch (`any`, depende de `bash`):
+`packaging/PKGBUILD` produce el paquete Arch (`any`, depende de `bash`):
 
-- Publica `bin`, `install`, `skel`, `etc`, `config`, `hardware`, `tools`,
+- Instala `bin`, `install`, `skel`, `etc`, `config`, `hardware`, `tools`,
   `migrations` y `themes` en **`/usr/share/x`**.
 - Hace ejecutables todos los `*.sh` (y el dispatcher `x`) bajo
   `/usr/share/x/{bin,install,hardware,tools}`.
 - Instala `/usr/bin/x` como symlink a `/usr/share/x/bin/x`.
 - Si existe `packaging/.vendor/x-config`, sus contenidos se fusionan en
-  `/usr/share/x/config` (el árbol de config offline que usa
+  `/usr/share/x/config` (el snapshot offline del escritorio que usa
   `tools/hyprland-install.sh`). **No hay entradas remotas en `source=()`**: el
-  snapshot se vende en-repo y nunca se descarga en tiempo de build.
+  snapshot se vende en el repo y nunca se descarga en el build.
 
-Metadatos de versión: `pkgver=0.1.0`, `pkgrel` sube por iteración (ahora 11 en
-el PKGBUILD). En el directorio queda un artefacto de build sobrante
-(`packaging/x-scripts-0.1.0-5-any.pkg.tar.zst`) obsoleto y git-ignored
-(`*.pkg.tar.zst`); reconstruir produce el pkgrel actual.
+Metadatos de versión: `pkgver=0.1.0`, `pkgrel` se sube por iteración
+(actualmente 13 en el PKGBUILD). Puede quedar un artefacto de build antiguo
+(`*.pkg.tar.zst`) en el directorio, pero es stale y está git-ignored; al
+reconstruir se produce el pkgrel actual.
 
-Para construir (sin red respecto a las fuentes de config; el árbol vendido debe
-estar presente primero, ver abajo):
+Para construir (sin red para las fuentes de config; el árbol vendido debe
+existir primero, ver abajo):
 
 ```bash
 cd packaging
@@ -37,68 +37,86 @@ construidos.
 
 ## `vendor-config.sh` — el snapshot offline
 
-`packaging/vendor-config.sh` regenera el snapshot de config vendido en
+`packaging/vendor-config.sh` regenera el snapshot vendido en
 **`packaging/.vendor/x-config`** desde los repos externos de origen (rama
 `main`), que se usan de solo lectura y siguen siendo la fuente de verdad:
 
-- `xscriptor-colors/hyprland` → `hypr`, `hypridle`, `rofi`, `dunst`, `cava`,
-  `sddm`, `pam.d`, más `scripts` → `scripts`.
-- `xscriptor-colors/terminal` → solo kitty (`kitty.conf` + `themes/`).
+- `equisdots/{dots,hyprland,shell,palettes,theme-sync,davincix,timex,login}`
+  → `equisdots/<repo>` (todo el stack de escritorio; `equisdots/dots` es el
+  instalador oficial y trae el `install-xwww.sh` standalone).
+- `xscriptor-colors/terminal` → solo kitty (`kitty.conf` + `themes/`) y
+  starship (`prompts/starship`: plantilla + temas).
 - `xscriptor-colors/nvim` → todo el árbol de `nvim`.
 
 Comportamiento:
 
-- Se niega a correr como root; exige `git` y acceso a red (clones shallow).
-- Quita `.git`/`.github` de cada clon y del árbol final.
-- **Excluye NVIDIA**: `scripts/gpu-mode.sh` (un wrapper envycontrol/Optimus) se
-  elimina y el script verifica que ya no esté; nada relacionado con NVIDIA se
-  vende ni configura.
+- Se niega a correr como root; requiere `git` y acceso a red (clones shallow).
+- Elimina `.git`/`.github` de cada clon y del árbol final.
+- Verifica que estén los archivos clave del stack (config Lua de hyprland,
+  política PAM, entry point del shell, paletas, motores, instalador de login,
+  kitty/starship/nvim).
+- No se excluye nada de NVIDIA: el snapshot queda completo para que el tool
+  pueda recurrir al setup NVIDIA upstream de equisdots cuando haga falta (la
+  fase hardware de X sigue siendo la dueña de la instalación del driver).
 - Nunca modifica los repos externos.
-- Al terminar imprime los commits fijados de las tres fuentes y un conteo de
-  archivos por directorio.
+- Imprime los commits fijados de las fuentes y un conteo de archivos por
+  directorio.
 
 ```bash
 packaging/vendor-config.sh        # desde la raíz del repo
 packaging/vendor-config.sh /path/to/repo
 ```
 
-La salida `.vendor` está **git-ignored**, así que un mantenedor debe
+La salida `.vendor` es **git-ignored**, así que un mantenedor debe
 (re)generarla antes de construir; no forma parte del historial de git.
 `config/hypr/README.md` documenta el mismo flujo.
+
+### Reproducibilidad (`vendor-config.lock`)
+
+Los commits resueltos se registran en **`packaging/vendor-config.lock`**
+(trackeado). En la siguiente ejecución cada clon se deja en su commit fijado (se
+descarga directo con `git fetch --depth 1 origin <sha>`), así que reconstruir el
+paquete desde el mismo lock produce el mismo snapshot. El lock se reescribe
+cuando cambia: commitéalo junto con el snapshot regenerado.
+
+- `X_VENDOR_BRANCH=ref` — rama a clonar (default `main`).
+- `X_VENDOR_NO_LOCK=1` — ignorar el lock (resolver los tips de rama) y reescribirlo.
+- `X_VENDOR_LOCK=path` — override del fichero de lock.
 
 ## Layout vendido
 
 ```
 packaging/.vendor/x-config
-├── hypr/ hypridle/ rofi/ dunst/ cava/ sddm/ pam.d/   ← repo hyprland
-├── scripts/                                          ← repo hyprland (→ ~/.config/hypr/scripts)
-├── kitty/                                            ← repo terminal (kitty.conf + themes/)
-└── nvim/                                             ← repo nvim
+├── equisdots/
+│   ├── dots/ hyprland/ shell/ palettes/ theme-sync/ davincix/ timex/ login/
+├── kitty/     (kitty.conf + themes/)
+├── starship/  (starship.toml + themes/)
+└── nvim/      (árbol de config completo)
 ```
 
-Publicado por el PKGBUILD como `/usr/share/x/config`, replica el layout de
-hyprland un nivel más arriba (`config/hypr` → `hypr`, `config/<rel>` →
-`<rel>`, `scripts` → `scripts`), que es exactamente como lo consume
-`tools/hyprland-install.sh`.
+El PKGBUILD lo instala como `/usr/share/x/config`; refleja el layout de
+`~/.local/share/equisdots` que usa `dots install` (`equisdots/<repo>`), que es
+exactamente como lo consume `tools/hyprland-install.sh` en offline.
 
 ## Uso offline en la ISO
 
-El sentido de vender es que un **escritorio Hyprland se pueda aprovisionar
-offline** justo después de la instalación:
+El sentido del vendoring es que un **escritorio Hyprland/equisdots pueda
+aprovisionarse offline** justo después de instalar:
 
 1. Un mantenedor ejecuta `vendor-config.sh` y construye `x-scripts` (snapshot
    embebido en el paquete).
-2. La distro (`xlnux/x`) instala `x-scripts` en el target y ejecuta las fases
+2. La distro (`xlnux/x`) instala `x-scripts` en el destino y corre las fases
    root durante la instalación.
 3. En el primer arranque la fase de usuario ejecuta
-   `tools/hyprland-install.sh`, que encuentra `/usr/share/x/config` y despliega
-   las configs **sin ningún clon externo**. La instalación de paquetes
-   (oficial + AUR) es la única parte que necesita repo/red, porque las configs
-   en sí viajan dentro del paquete.
+   `tools/hyprland-install.sh`, que encuentra
+   `/usr/share/x/config/equisdots` y despliega todo el escritorio **sin clonar
+   nada externo**. La instalación de paquetes (oficiales + AUR + la release de
+   xwww) es lo único que necesita repositorio/red: las configs viajan dentro
+   del paquete.
 
 Notas / estado actual (del ROADMAP del workspace):
 
-- `x-base.packages` (la lista base legible por el builder) se publica pero
-  todavía no tiene consumidor cableado en el builder de la distro.
-- El mirror offline empaquetado del lado distro (instalación totalmente sin
-  red) sigue siendo una mejora pendiente en `xlnux/x`.
+- `x-base.packages` (la lista base legible por el builder) se empaqueta pero
+  aún no tiene consumidor cableado en el builder de la distro.
+- El bundling de un mirror offline en la distro (instalación 100% sin red)
+  sigue siendo una mejora pendiente en `xlnux/x`.
